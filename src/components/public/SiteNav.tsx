@@ -5,6 +5,7 @@ import Link from "next/link";
 import { MenuIcon, XIcon } from "lucide-react";
 
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 
 const LINKS = [
   { href: "/", label: "Home" },
@@ -17,29 +18,39 @@ export function SiteNav() {
 
   return (
     <>
+      {/* Single fixed toggle, left-center — its icon morphs between hamburger
+          and X rather than swapping to a second, differently-positioned
+          button. z-[60] keeps it above the dialog overlay (z-50) so it stays
+          the one control for both opening and closing. */}
       <button
         type="button"
-        onClick={() => setOpen(true)}
-        aria-label="Open menu"
-        className="border-portfolio-accent text-portfolio-accent hover:bg-portfolio-accent/10 fixed top-6 left-6 z-50 rounded border p-2"
+        onClick={() => setOpen((o) => !o)}
+        aria-label={open ? "Close menu" : "Open menu"}
+        aria-expanded={open}
+        className="text-portfolio-accent hover:opacity-70 fixed top-1/2 left-6 z-[60] -translate-y-1/2 cursor-pointer"
       >
-        <MenuIcon className="size-5" />
+        <span className="relative block size-8">
+          <MenuIcon
+            className={cn(
+              "absolute inset-0 size-8 transition-all duration-300 ease-in-out",
+              open ? "rotate-90 opacity-0" : "rotate-0 opacity-100",
+            )}
+          />
+          <XIcon
+            className={cn(
+              "absolute inset-0 size-8 transition-all duration-300 ease-in-out",
+              open ? "rotate-0 opacity-100" : "-rotate-90 opacity-0",
+            )}
+          />
+        </span>
       </button>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent
           showCloseButton={false}
-          className="bg-portfolio-overlay flex h-screen max-h-screen w-screen max-w-none flex-col justify-center gap-0 rounded-none border-none p-0"
+          className="bg-portfolio-overlay top-0 left-0 flex h-screen max-h-screen w-screen max-w-none translate-x-0 translate-y-0 flex-col justify-center gap-0 rounded-none border-none p-0 sm:max-w-none"
         >
           <DialogTitle className="sr-only">Site menu</DialogTitle>
-          <button
-            type="button"
-            onClick={() => setOpen(false)}
-            aria-label="Close menu"
-            className="border-portfolio-accent text-portfolio-accent hover:bg-portfolio-accent/10 absolute top-6 left-6 rounded border p-2"
-          >
-            <XIcon className="size-5" />
-          </button>
           <nav className="flex flex-col gap-6 pl-10 sm:pl-20">
             {LINKS.map((link) => (
               <Link

@@ -100,7 +100,7 @@
   --portfolio-accent: #c0392b;
   --portfolio-accent-dim: #8e2a20;
   --portfolio-overlay: rgb(0 0 0 / 55%);
-  --portfolio-font-heading: var(--font-archivo), var(--font-geist-sans);
+  --portfolio-font-heading: var(--font-bebas-neue), var(--font-geist-sans);
   --portfolio-font-body: var(--font-geist-sans);
   --portfolio-gutter: 1.5rem;
 }

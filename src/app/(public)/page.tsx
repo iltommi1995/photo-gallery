@@ -25,11 +25,11 @@ export default async function HomePage() {
           blurDataURL={heroPhoto.blurDataUrl ?? undefined}
           sizes="100vw"
           priority
-          className="object-cover"
+          className="object-cover grayscale"
         />
       )}
       <div className="from-portfolio-overlay absolute inset-0 bg-gradient-to-t to-transparent" />
-      <h1 className="font-portfolio-heading text-portfolio-paper absolute right-6 bottom-12 text-right text-4xl leading-none font-bold tracking-tight uppercase sm:right-16 sm:bottom-16 sm:text-7xl">
+      <h1 className="font-portfolio-heading text-portfolio-accent absolute right-6 bottom-12 text-right text-5xl leading-none tracking-wide uppercase sm:right-16 sm:bottom-16 sm:text-8xl">
         {settings.siteTitle}
       </h1>
     </main>

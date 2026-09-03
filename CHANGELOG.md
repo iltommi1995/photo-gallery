@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed (post-launch visual polish, requested live)
+
+- Home hero title: red accent color instead of white, and the portfolio
+  heading font switched from Archivo to Bebas Neue (a tall condensed
+  display face) for a more editorial/magazine masthead feel — affects
+  every `font-portfolio-heading` use site-wide (`AccentLabel`, `AlbumHero`,
+  `SiteNav`), not just Home.
+- `SiteNav`: replaced the two separate hamburger/close buttons with a
+  single fixed, left-center-positioned toggle whose icon animates between
+  hamburger and X (rotate + cross-fade). Also fixed a real bug: the menu
+  overlay rendered as a small centered box instead of full-screen, because
+  shadcn's `DialogContent` default `sm:max-w-sm` wasn't being overridden
+  by our unprefixed `max-w-none` (Tailwind/CSS cascade — a `sm:`-prefixed
+  utility beats an unprefixed one at that breakpoint regardless of source
+  order in the class list). Fixed by adding `sm:max-w-none` explicitly, the
+  same pattern `Lightbox.tsx` already used correctly.
+
 ### Added (Phase 10 — Docker Compose deployment)
 
 - `docker-compose.yml`: `db` (Postgres, healthchecked), `app` (this Next.js
