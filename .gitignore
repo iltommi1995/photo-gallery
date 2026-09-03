@@ -39,3 +39,20 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# storybook
+/storybook-static
+
+# playwright / test artifacts
+/playwright-report
+/test-results
+/blob-report
+
+# photo storage volume (dev)
+/storage/*
+!/storage/.gitkeep
+
+# prisma
+/prisma/dev.db*
+
+*storybook.log
