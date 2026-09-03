@@ -25,3 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Dev seed script generating placeholder photos (gradient JPEGs via `sharp`,
   fabricated EXIF-like metadata) composed into 3 sample albums/5 chapters,
   and the initial admin user from `.env`.
+- Admin authentication: Auth.js Credentials provider against the single
+  `Admin` row, JWT sessions, login page at `/admin/login`, an in-memory
+  login rate limiter, and a `proxy.ts` (Next.js 16's replacement for
+  `middleware.ts`) gating `/admin/**` and mutating `/api/**` routes.
