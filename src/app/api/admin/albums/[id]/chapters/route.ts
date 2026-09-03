@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/db";
 import { createChapterSchema } from "@/lib/schemas/album";
+import { revalidateAlbum } from "@/lib/revalidate-public";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -29,5 +30,6 @@ export async function POST(request: Request, { params }: RouteContext) {
     },
   });
 
+  await revalidateAlbum(albumId);
   return NextResponse.json({ chapter }, { status: 201 });
 }

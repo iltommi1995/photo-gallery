@@ -7,6 +7,7 @@ const NAV_LINKS = [
   { href: "/admin", label: "Dashboard" },
   { href: "/admin/albums", label: "Albums" },
   { href: "/admin/photos", label: "Photos" },
+  { href: "/admin/settings", label: "Settings" },
 ];
 
 export default async function AdminDashboardLayout({

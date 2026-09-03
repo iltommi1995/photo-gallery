@@ -4,9 +4,22 @@ import { notFound } from "next/navigation";
 import { AlbumScrollView } from "@/components/public/AlbumScrollView";
 import { prisma } from "@/lib/db";
 
+// Published albums are pre-rendered at build time and revalidated on
+// publish/edit (see revalidatePath calls in the album/chapter API routes)
+// rather than on a fixed interval — an hour is just a safety net.
+export const revalidate = 3600;
+
 type AlbumPageProps = {
   params: Promise<{ slug: string }>;
 };
+
+export async function generateStaticParams() {
+  const albums = await prisma.album.findMany({
+    where: { status: "PUBLISHED" },
+    select: { slug: true },
+  });
+  return albums.map((album) => ({ slug: album.slug }));
+}
 
 async function getAlbum(slug: string) {
   return prisma.album.findFirst({

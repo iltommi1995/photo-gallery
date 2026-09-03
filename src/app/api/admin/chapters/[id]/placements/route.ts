@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/db";
 import { replacePlacementsSchema } from "@/lib/schemas/album";
+import { revalidateAlbumByChapter } from "@/lib/revalidate-public";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -53,5 +54,6 @@ export async function PUT(request: Request, { params }: RouteContext) {
     include: { photo: { include: { tags: true } } },
   });
 
+  await revalidateAlbumByChapter(chapterId);
   return NextResponse.json({ placements });
 }
