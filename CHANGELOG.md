@@ -7,6 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (Phase 9 — hardening)
+
+- Playwright E2E suite (`e2e/`): admin login (redirect/reject/success/
+  sign-out), full album management (login → upload a real photo → create
+  album → create chapter → drag-and-drop it onto the canvas → confirm the
+  save persisted across a reload → verify live preview), and public
+  horizontal-scroll navigation (wheel remap, keyboard End, lightbox
+  open/close, mobile fallback). `playwright.config.ts` runs a dedicated
+  dev server on port 3200 to avoid clashing with anything else running
+  locally.
+- SEO: `src/app/sitemap.ts` and `robots.ts` (Next's metadata-route
+  convention), Open Graph tags + `metadataBase` (root layout and the
+  album page, cover photo as `og:image`), and `schema.org` `ImageGallery`/
+  `Photograph` JSON-LD on published album pages (HTML-escaped against
+  admin-entered caption/location text breaking out of the `<script>` tag).
+- A short in-code note on `src/lib/auth.ts` documenting why there's no
+  separate CSRF token scheme: Auth.js's session cookie defaults to
+  `SameSite=Lax` + `HttpOnly` (verified via the actual `Set-Cookie`
+  header), which already withholds it from cross-site mutation requests
+  for this single-admin app.
+
+### Fixed (found by writing the E2E suite)
+
+- **Drag-and-drop from the photo library never worked.** `PhotoLibrarySidebar`
+  (containing the draggable photos) was rendered outside the `DndContext`
+  that wrapped the canvas — `useDraggable` requires being a descendant of
+  the same context as its sensors/drop targets. This means the admin
+  editor's core interaction had never actually functioned; the Phase 5
+  manual verification exercised the underlying API routes directly and
+  didn't catch it.
+- **Every album page loaded on the wrong chapter.** Chromium re-resolves
+  `scroll-snap-type: x mandatory` as chapter images load and shift layout,
+  repeatedly across several frames, landing `scrollLeft` on the second
+  section instead of the first — consistently, on every load.
+  `overflow-anchor: none` and a one-time reset didn't hold (the browser's
+  re-snap wins a same-frame race against a single write). Fixed by
+  disabling `scroll-snap-type` entirely for a short window after mount —
+  and restoring it immediately on the visitor's first real interaction —
+  so there's nothing to incorrectly snap to while images are still loading.
+- Mobile mosaic images rendered with zero height (`next/image fill` needs
+  a sized parent; the grid's row height was only set from the `sm:`
+  breakpoint up) — added a mobile-width `auto-rows` value to `ChapterMosaic`.
+
 ### Added
 
 - Project bootstrap: Next.js 16 (App Router, TypeScript strict, Tailwind CSS v4), pnpm,

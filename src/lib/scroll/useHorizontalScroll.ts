@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 const DESKTOP_QUERY = "(min-width: 768px)";
 const LERP_FACTOR = 0.15;
 const SNAP_EPSILON = 0.5;
+const SETTLE_WINDOW_MS = 1000;
 
 /**
  * Drives the desktop horizontal-scroll album track: remaps vertical mouse
@@ -27,7 +28,34 @@ export function useHorizontalScroll() {
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const isDesktop = () => window.matchMedia(DESKTOP_QUERY).matches;
 
-    targetRef.current = container.scrollLeft;
+    // Chromium re-resolves `scroll-snap-type: x mandatory` as chapter images
+    // load and shift layout, and can land on the second section instead of
+    // the first — repeatedly, across several frames, so forcibly resetting
+    // scrollLeft loses a same-frame race against the browser's own
+    // re-snapping every time. Instead, remove the snap type entirely for a
+    // short window after mount (nothing to incorrectly snap to), then
+    // restore it — either once things settle, or immediately on the
+    // visitor's first real interaction.
+    container.style.scrollSnapType = "none";
+    container.scrollLeft = 0;
+    let settling = true;
+    const settleTimer: ReturnType<typeof setTimeout> = setTimeout(() => {
+      settling = false;
+      // `container` is narrowed non-null above, but TS doesn't carry that
+      // through this closure — it's the same stable ref throughout the effect.
+      container!.style.scrollSnapType = "";
+    }, SETTLE_WINDOW_MS);
+
+    function stopSettling() {
+      if (!settling) return;
+      settling = false;
+      clearTimeout(settleTimer);
+      // `container` is narrowed non-null above, but TS doesn't carry that
+      // through this closure — it's the same stable ref throughout the effect.
+      container!.style.scrollSnapType = "";
+    }
+
+    targetRef.current = 0;
 
     function stopLoop() {
       if (rafRef.current !== null) {
@@ -60,6 +88,7 @@ export function useHorizontalScroll() {
       const c = containerRef.current;
       if (!c || !isDesktop()) return;
       if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return; // native horizontal input
+      stopSettling();
       event.preventDefault();
       const max = c.scrollWidth - c.clientWidth;
       targetRef.current = Math.min(max, Math.max(0, targetRef.current + event.deltaY));
@@ -94,6 +123,7 @@ export function useHorizontalScroll() {
         return;
       if (!["ArrowRight", "ArrowLeft", "Home", "End"].includes(event.key)) return;
 
+      stopSettling();
       event.preventDefault();
       const current = c.scrollLeft;
       const max = c.scrollWidth - c.clientWidth;
@@ -119,6 +149,7 @@ export function useHorizontalScroll() {
     container.addEventListener("keydown", onKeyDown);
 
     return () => {
+      stopSettling();
       container.removeEventListener("wheel", onWheel);
       container.removeEventListener("scroll", onScroll);
       container.removeEventListener("keydown", onKeyDown);

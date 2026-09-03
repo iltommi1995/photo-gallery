@@ -248,14 +248,14 @@ export function AlbumEditor({ album, initialChapters, allPhotos }: AlbumEditorPr
       {preview ? (
         activeChapter && <ChapterMosaic placements={activeChapter.placements} />
       ) : (
-        <div className="grid grid-cols-[220px_1fr] gap-4">
-          <PhotoLibrarySidebar photos={allPhotos} chapterPhotoIds={chapterPhotoIds} />
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-          >
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          <div className="grid grid-cols-[220px_1fr] gap-4">
+            <PhotoLibrarySidebar photos={allPhotos} chapterPhotoIds={chapterPhotoIds} />
             {activeChapter && (
               <ChapterCanvas
                 placements={activeChapter.placements}
@@ -263,20 +263,20 @@ export function AlbumEditor({ album, initialChapters, allPhotos }: AlbumEditorPr
                 onRemove={handleRemove}
               />
             )}
-            <DragOverlay>
-              {draggedPhoto && (
-                <div className="relative size-20 overflow-hidden rounded-md shadow-lg">
-                  <Image
-                    src={`/api/media/${draggedPhoto.id}/thumbnail`}
-                    alt=""
-                    fill
-                    className="object-cover"
-                  />
-                </div>
-              )}
-            </DragOverlay>
-          </DndContext>
-        </div>
+          </div>
+          <DragOverlay>
+            {draggedPhoto && (
+              <div className="relative size-20 overflow-hidden rounded-md shadow-lg">
+                <Image
+                  src={`/api/media/${draggedPhoto.id}/thumbnail`}
+                  alt=""
+                  fill
+                  className="object-cover"
+                />
+              </div>
+            )}
+          </DragOverlay>
+        </DndContext>
       )}
     </div>
   );
