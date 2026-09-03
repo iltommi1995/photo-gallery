@@ -1,5 +1,13 @@
 # Local development database only. Full-stack deploy (app + db + reverse
 # proxy) is docker-compose.yml — see docs/deployment.md.
+#
+# Explicit project name: without it, Compose infers the project name from
+# the directory ("photo-gallery"), colliding with docker-compose.yml's
+# pinned `name: photo-gallery` — running a `docker compose` command against
+# one file while the other's containers exist can then treat them as the
+# same project and recreate/remove them into each other's shape.
+name: photo-gallery-dev
+
 services:
   db:
     image: postgres:17-alpine
@@ -16,3 +24,7 @@ services:
 
 volumes:
   photo-gallery-dev-db-data:
+    # Pinned to the volume's actual existing name (created before this file
+    # had an explicit project `name:`, back when it was inferred from the
+    # directory) so this change doesn't orphan real seeded/dev data.
+    name: photo-gallery_photo-gallery-dev-db-data

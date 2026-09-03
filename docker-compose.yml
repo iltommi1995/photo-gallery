@@ -1,0 +1,74 @@
+# Production stack: app + Postgres + Caddy (automatic HTTPS). See
+# docs/deployment.md for the full first-boot/update/backup walkthrough —
+# in particular, why `db` must be started (and healthy) *before* building
+# `app`.
+name: photo-gallery
+
+networks:
+  photo-gallery-net:
+    name: photo-gallery-net
+
+volumes:
+  db-data:
+  photo-storage:
+  caddy-data:
+  caddy-config:
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-photogallery}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:-photogallery}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - photo-gallery-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-photogallery}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      network: photo-gallery-net # lets the build reach `db` — see docs/deployment.md
+      args:
+        DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:?NEXT_PUBLIC_SITE_URL is required}
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      AUTH_SECRET: ${AUTH_SECRET:?AUTH_SECRET is required}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:?ADMIN_EMAIL is required}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD is required}
+      ADMIN_NAME: ${ADMIN_NAME:-Admin}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:?NEXT_PUBLIC_SITE_URL is required}
+      STORAGE_DIR: /app/storage
+    volumes:
+      - photo-storage:/app/storage
+    networks:
+      - photo-gallery-net
+    depends_on:
+      db:
+        condition: service_healthy
+
+  reverse-proxy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      SITE_DOMAIN: ${SITE_DOMAIN:?SITE_DOMAIN is required}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      - photo-gallery-net
+    depends_on:
+      - app
