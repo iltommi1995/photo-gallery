@@ -1,0 +1,63 @@
+import { Meta } from "@storybook/addon-docs/blocks";
+
+<Meta title="Docs/Design System" />
+
+# Design System
+
+Two token sets live side by side in `src/app/globals.css` (Tailwind v4,
+CSS-first — there is no `tailwind.config.ts`). See `AGENTS.md` → Design
+system for the rationale.
+
+## Portfolio tokens (public site)
+
+Fixed black & white photography with a single red accent. Does **not**
+respond to OS dark mode — this is the photographer's brand, not a themeable
+surface.
+
+<div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", margin: "1.5rem 0" }}>
+  {[
+    ["--portfolio-ink", "var(--portfolio-ink)", "#111111"],
+    ["--portfolio-paper", "var(--portfolio-paper)", "#ffffff"],
+    ["--portfolio-accent", "var(--portfolio-accent)", "#c0392b"],
+    ["--portfolio-accent-dim", "var(--portfolio-accent-dim)", "#8e2a20"],
+  ].map(([name, value, hex]) => (
+    <div key={name} style={{ width: 160 }}>
+      <div
+        style={{
+          height: 64,
+          borderRadius: 8,
+          background: value,
+          border: "1px solid #8883",
+        }}
+      />
+      <div style={{ fontFamily: "monospace", fontSize: 12, marginTop: 6 }}>{name}</div>
+      <div style={{ fontFamily: "monospace", fontSize: 11, opacity: 0.6 }}>{hex}</div>
+    </div>
+  ))}
+</div>
+
+Utility classes: `bg-portfolio-paper`, `text-portfolio-ink`,
+`text-portfolio-accent`, `border-portfolio-accent`, `bg-portfolio-overlay`
+(the dark scrim behind the hamburger nav), `font-portfolio-heading` (bold
+display type for hero/album titles — Archivo), `font-portfolio-body`.
+
+## Admin theme (shadcn)
+
+Neutral, functional, used only under `/admin`. Standard shadcn/ui tokens —
+`--background`, `--primary`, `--muted`, `--destructive`, etc. — see any
+`src/components/ui/*` primitive for usage. Not documented separately here;
+it's the shadcn default and intentionally unbranded.
+
+## Typography
+
+- **Headings (public)**: `font-portfolio-heading` — Archivo, weights
+  600/700/800, typically uppercase with wide tracking for hero titles
+  (see the Home hero and album-open title in the reference screenshots).
+- **Body (public)**: `font-portfolio-body` — Geist Sans.
+- **Admin UI**: default `font-sans` (Geist Sans) throughout.
+
+## Spacing
+
+`--spacing-portfolio-gutter` (`1.5rem`) is the base gutter for public-page
+layout margins — used as `p-portfolio-gutter` / `gap-portfolio-gutter`.
+Everything else uses Tailwind's default spacing scale.
