@@ -7,6 +7,12 @@ import { checkRateLimit } from "@/lib/rate-limit";
 
 const LOGIN_RATE_LIMIT = { max: 5, windowMs: 60_000 };
 
+// CSRF on the /api/admin/** mutation routes: Auth.js's session cookie
+// defaults to SameSite=Lax (HttpOnly), which browsers withhold from
+// cross-site fetch/XHR/form POST-PUT-PATCH-DELETE requests — a cross-origin
+// page can't ride the admin's session to call these routes. That's why
+// there's no separate CSRF token scheme here; adding one would be
+// redundant for this single-admin app.
 export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
   pages: { signIn: "/admin/login" },

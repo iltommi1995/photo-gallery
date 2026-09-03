@@ -41,6 +41,11 @@ export function AlbumScrollView({ title, coverPhoto, chapters }: AlbumScrollView
       <div
         ref={containerRef}
         tabIndex={0}
+        data-testid="album-scroll-track"
+        // overflow-anchor: none — without it, Chromium's scroll anchoring
+        // "corrects" scrollLeft as chapter images load asynchronously and
+        // shift layout, landing the page on the wrong section on load.
+        style={{ overflowAnchor: "none" }}
         className="focus:outline-none md:flex md:h-screen md:snap-x md:snap-mandatory md:overflow-x-auto md:overflow-y-hidden"
       >
         <AlbumHero title={title} coverPhoto={coverPhoto} />

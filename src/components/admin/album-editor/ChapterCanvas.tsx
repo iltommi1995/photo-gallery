@@ -20,6 +20,7 @@ export function ChapterCanvas({ placements, onResize, onRemove }: ChapterCanvasP
   return (
     <div
       ref={setNodeRef}
+      data-testid="chapter-canvas-dropzone"
       className={cn(
         "min-h-64 rounded-lg border-2 border-dashed p-3 transition-colors",
         isOver ? "border-primary bg-muted/50" : "border-border",

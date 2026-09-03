@@ -47,7 +47,7 @@ export function ChapterMosaic({
   return (
     <div
       className={cn(
-        "grid grid-cols-2 gap-2 sm:grid-cols-4 sm:auto-rows-[12rem]",
+        "grid auto-rows-[10rem] grid-cols-2 gap-2 sm:grid-cols-4 sm:auto-rows-[12rem]",
         className,
       )}
     >
