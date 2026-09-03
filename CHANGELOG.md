@@ -29,3 +29,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `Admin` row, JWT sessions, login page at `/admin/login`, an in-memory
   login rate limiter, and a `proxy.ts` (Next.js 16's replacement for
   `middleware.ts`) gating `/admin/**` and mutating `/api/**` routes.
+- Photo upload pipeline: `/api/admin/photos` (multipart upload, EXIF
+  extraction via `exifr`, `sharp`-generated thumbnail/medium/full JPEG
+  variants + LQIP blur placeholder), `/api/admin/photos/[id]` (manual
+  metadata edit), `/api/admin/tags` (create-or-get), and `/api/media/[id]/[variant]`
+  serving generated variants from the local storage volume through
+  `next/image` (which negotiates AVIF/WebP automatically — no separate
+  format pre-generation needed).
+- Admin `/admin/photos` page: drag-and-drop multi-file upload with
+  per-file progress, a photo library grid, and a metadata edit dialog
+  (camera/lens/exposure fields, film-stock for analog scans, inline tag
+  create/assign). Alt text is required through this form even though it's
+  nullable in the DB — a photo can exist unplaced without one.
