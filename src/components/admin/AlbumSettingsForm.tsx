@@ -15,17 +15,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { PhotoPickerSelect } from "@/components/admin/PhotoPickerSelect";
+
+type PickablePhoto = { id: string; filename: string; altText: string | null };
 
 type AlbumSettingsFormProps = {
   album: Album;
+  photos: PickablePhoto[];
 };
 
-export function AlbumSettingsForm({ album }: AlbumSettingsFormProps) {
+export function AlbumSettingsForm({ album, photos }: AlbumSettingsFormProps) {
   const router = useRouter();
   const [title, setTitle] = useState(album.title);
   const [subtitle, setSubtitle] = useState(album.subtitle ?? "");
   const [locationName, setLocationName] = useState(album.locationName ?? "");
   const [status, setStatus] = useState(album.status);
+  const [coverPhotoId, setCoverPhotoId] = useState(album.coverPhotoId);
   const [saving, setSaving] = useState(false);
 
   async function save() {
@@ -38,6 +43,7 @@ export function AlbumSettingsForm({ album }: AlbumSettingsFormProps) {
         subtitle: subtitle || null,
         locationName: locationName || null,
         status,
+        coverPhotoId,
       }),
     });
     setSaving(false);
@@ -86,6 +92,15 @@ export function AlbumSettingsForm({ album }: AlbumSettingsFormProps) {
             <SelectItem value="PUBLISHED">Published</SelectItem>
           </SelectContent>
         </Select>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="album-cover">Cover photo</Label>
+        <PhotoPickerSelect
+          id="album-cover"
+          photos={photos}
+          value={coverPhotoId}
+          onChange={setCoverPhotoId}
+        />
       </div>
       <Button type="button" onClick={save} disabled={saving}>
         {saving ? "Saving…" : "Save"}

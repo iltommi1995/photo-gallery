@@ -492,6 +492,22 @@ async function main() {
     data: { coverPhotoId: dresdenPhotos[0].id },
   });
 
+  // --- Site settings (home hero, About Me) --------------------------------
+  await prisma.siteSettings.upsert({
+    where: { id: "singleton" },
+    update: {},
+    create: {
+      id: "singleton",
+      siteTitle: "Photography",
+      heroPhotoId: milanNightPhotos[0].id,
+      aboutTitle: "About",
+      aboutBody:
+        "A photographer working mostly in black and white, drawn to the quiet " +
+        "geometry of cities at night and the everyday moments in between.",
+      aboutPhotoId: milanDayPhotos[1].id,
+    },
+  });
+
   console.log(
     "Seed complete: 3 albums, 5 chapters, " +
       (milanDayPhotos.length +

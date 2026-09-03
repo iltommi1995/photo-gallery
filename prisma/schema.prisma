@@ -12,6 +12,21 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Site-wide content not owned by any single album: the home hero and the
+// About Me page. Not in the original spec's §6 listing, but both spec §5.1
+// ("immagine di apertura configurabile da admin") and §5.4 ("editabile da
+// admin") require somewhere to persist it — a single-row settings table is
+// the smallest addition that does that.
+model SiteSettings {
+  id           String   @id @default("singleton")
+  siteTitle    String   @default("Photography")
+  heroPhotoId  String?
+  aboutTitle   String?
+  aboutBody    String?
+  aboutPhotoId String?
+  updatedAt    DateTime @updatedAt
+}
+
 model Admin {
   id           String   @id @default(cuid())
   email        String   @unique

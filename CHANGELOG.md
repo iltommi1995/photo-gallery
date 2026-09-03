@@ -71,3 +71,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the album's full placement order.
 - Only `PUBLISHED` albums are reachable at `/places/[slug]`; draft albums
   and unknown slugs 404.
+- `SiteSettings` singleton model + migration (home hero photo, site title,
+  About Me title/body/photo) — not in the original spec's data-model
+  listing, but both the home hero and the About page require somewhere to
+  persist admin-edited content, so this is the smallest addition that
+  provides it. `getSiteSettings()` handles the concurrent-first-request
+  race safely (falls back to a plain read on a unique-constraint hit).
+- Public pages: Home (hero photo + site title), `/places` (grid of
+  published album covers), `/about` (photo + rich-ish text from
+  `SiteSettings`). All three, plus the album page, share a `(public)`
+  route group layout with `SiteNav` — the hamburger-triggered full-screen
+  overlay menu (Home / About Me / Places).
+- Admin: `/admin/settings` (site title, hero photo, About Me content) and
+  a cover-photo picker on the album settings form, both via a reusable
+  `PhotoPickerSelect`.
+- ISR: published albums, `/places`, `/about`, and `/` are statically
+  generated (`generateStaticParams` for albums) and revalidated on
+  publish/edit via `revalidatePath` in the relevant admin mutation routes,
+  with a 1-hour revalidation window as a fallback rather than the primary
+  invalidation mechanism.

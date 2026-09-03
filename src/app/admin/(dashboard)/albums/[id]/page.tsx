@@ -33,7 +33,7 @@ export default async function AlbumEditorPage({ params }: AlbumEditorPageProps) 
 
   return (
     <div className="flex flex-col gap-6">
-      <AlbumSettingsForm album={album} />
+      <AlbumSettingsForm album={album} photos={allPhotos} />
       <AlbumEditor album={album} initialChapters={album.chapters} allPhotos={allPhotos} />
     </div>
   );
