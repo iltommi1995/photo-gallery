@@ -41,3 +41,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (camera/lens/exposure fields, film-stock for analog scans, inline tag
   create/assign). Alt text is required through this form even though it's
   nullable in the DB — a photo can exist unplaced without one.
+- Shared `ChapterMosaic` component (`src/components/gallery/`) rendering
+  an ordered list of placements as a mixed-size mosaic grid — the single
+  renderer used by both the admin live-preview and (from Phase 6) the
+  public album page.
+- Admin album/chapter/placement editor at `/admin/albums/[id]`: drag
+  photos from a library sidebar onto a chapter canvas (`@dnd-kit`), resize
+  between SMALL/MEDIUM/LARGE/FULL by click, reorder placements and
+  chapters by drag, rename/create/delete chapters, and a live-preview
+  toggle that renders the exact shared `ChapterMosaic`. Debounced autosave
+  with a saved/unsaved/error status indicator; the whole chapter's
+  placement list is replaced atomically on save (`PUT
+  /api/admin/chapters/[id]/placements`) rather than diffed, since a
+  chapter holds at most a few dozen photos.
+- `/admin/albums` list and `/admin` dashboard now show real album/photo
+  counts.
