@@ -1,0 +1,79 @@
+import { Meta } from "@storybook/addon-docs/blocks";
+
+import { HorizontalScrollDemo } from "./HorizontalScrollDemo";
+
+<Meta title="Docs/Horizontal Scroll" />
+
+# Horizontal Scroll
+
+The public album page (`/places/[slug]`) scrolls **horizontally** on desktop —
+one section per chapter, snapping like pages. Below the `768px` breakpoint it
+falls back to a normal vertical stack. Try both below: scroll with a mouse
+wheel or trackpad, or focus the strip and use arrow keys / Home / End, then
+shrink your viewport to see the mobile fallback (open this page in a wider
+browser window to see the desktop track at all — the demo mirrors the real
+`md:` breakpoint).
+
+<HorizontalScrollDemo />
+
+_(Colored boxes stand in for a hero + three chapters — same hook, same
+container classes as the real page, no database required for this demo.)_
+
+## How it works — `useHorizontalScroll`
+
+`src/lib/scroll/useHorizontalScroll.ts` attaches three listeners to the
+scroll container:
+
+- **`wheel`** — if the event's `deltaY` dominates (a normal mouse wheel),
+  `preventDefault()` and accumulate it into a `target` scroll position,
+  animated toward via `requestAnimationFrame` lerp (`scrollLeft +=
+(target - scrollLeft) * 0.15` per frame) for an inertial feel. If `deltaX`
+  dominates instead (trackpad horizontal swipe), the handler does nothing —
+  native horizontal scroll behavior owns it untouched.
+- **`scroll`** — recomputes the 0–1 progress value (for the progress bar) and
+  keeps the lerp target in sync when the browser scrolls the container
+  natively (trackpad), so a following wheel event doesn't jump.
+- **`keydown`** — `ArrowLeft`/`ArrowRight` jump to the previous/next
+  `[data-scroll-section]` element's `offsetLeft`; `Home`/`End` jump to the
+  very start/end. Ignored while an `<input>`/`<textarea>` has focus.
+
+All three checks `window.matchMedia("(min-width: 768px)")` before doing
+anything — below that width the hook is inert, so it never fights the
+mobile browser's native vertical scroll, even if the container element is
+still mounted (see below).
+
+`prefers-reduced-motion: reduce` disables the lerp animation entirely —
+wheel input jumps `scrollLeft` directly, and keyboard navigation uses
+`behavior: "auto"` instead of `"smooth"`.
+
+## One DOM tree, not two
+
+The desktop track and the mobile stack are **the same markup** — no
+JS-detected layout switch, no duplicated chapter content. The container's
+Tailwind classes are conditional purely via the `md:` breakpoint prefix
+(`flex flex-col` unprefixed → `md:flex md:flex-row md:overflow-x-auto
+md:snap-x md:snap-mandatory` at `md:`), so:
+
+- On mobile, it's a normal vertical flow. `ChapterMosaic`'s own responsive
+  grid (`grid-cols-2 sm:grid-cols-4`) already collapses to two columns below
+  `sm`, which doubles as the "simpler mobile mosaic" spec called for — no
+  separate mobile-specific layout component needed.
+- On desktop, CSS scroll-snap (`snap-x snap-mandatory` on the container,
+  `snap-start` on each `[data-scroll-section]`) does the actual snapping;
+  the hook only handles input remapping and keyboard nav on top of it.
+
+This avoids rendering (and fetching) every photo twice, and there's no
+hydration flash from a JS media-query check landing after first paint.
+
+## Accessibility
+
+Reading/tab order follows DOM order regardless of the visual mosaic layout —
+`ChapterMosaic` renders placements in array order and only uses CSS
+`grid-column`/`grid-row` spans for the asymmetric layout, never `order` or
+DOM reordering, so a screen reader or keyboard-only user encounters photos in
+the same sequence a sighted mouse user scrolls through them.
+
+See `src/components/public/AlbumScrollView.tsx` for how this hook, the
+progress bar, and the lightbox (`src/components/public/Lightbox.tsx`) are
+composed around the shared `ChapterMosaic` from
+[Admin Editor](/docs/admin-editor).

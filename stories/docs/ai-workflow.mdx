@@ -1,0 +1,89 @@
+import { Meta } from "@storybook/addon-docs/blocks";
+
+<Meta title="Docs/AI Workflow" />
+
+# AI Workflow
+
+This project is developed with both Claude Code and Codex CLI, kept in sync
+through a single set of shared playbooks rather than duplicated tool-specific
+logic. If this page and the actual contents of `.claude/`, `.codex/`, or
+`docs/ai/` ever disagree, **the filesystem is right and this page is
+stale** — it drifts fastest since nothing forces it to track code the way
+component stories track components (see `docs/ai/storybook-audit.md`, which
+calls this out explicitly).
+
+## The layering
+
+```
+docs/ai/*.md            <- canonical procedure for each recurring workflow
+       ↑ wrapped by                ↑ wrapped by
+.claude/agents/*.md    .claude/skills/*/SKILL.md    .codex/prompts/*.md
+(scoped-tool agents)   (slash-command entry points)  (Codex custom prompts)
+```
+
+Every skill, agent, and Codex prompt is a _thin wrapper_ — a pointer to the
+matching `docs/ai/` file plus tool/scope constraints. None of them re-describe
+the procedure inline. That's intentional: a step added to a playbook applies
+to Claude Code and Codex CLI simultaneously, with nothing to keep in sync by
+hand.
+
+## `AGENTS.md` and `CLAUDE.md`
+
+`AGENTS.md` (repo root) is the tool-agnostic source of truth — project
+overview, commands, folder structure, data model summary, design system
+summary, code conventions, and links to every `docs/ai/` playbook. Both
+Claude Code and Codex CLI read it automatically.
+
+`CLAUDE.md` is deliberately short: an `@AGENTS.md` import (Claude Code's
+native way to pull in another file) plus only what's Claude-Code-specific —
+where to find sub-agents/skills and how to invoke them. Nothing in it
+duplicates `AGENTS.md`.
+
+## The five playbooks (`docs/ai/`)
+
+| Playbook                      | What it's for                                                                                                                      |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `add-component.md`            | Scaffold a component + story + test, following the design system split (`portfolio-*` tokens for public, shadcn tokens for admin). |
+| `add-album-layout-variant.md` | Add a new `PlacementSize` or a presentation-only layout preset — covers when it's a schema change vs. not.                         |
+| `backfill-exif.md`            | Re-extract EXIF on already-uploaded photos (e.g. after fixing the extractor), dry-run by default.                                  |
+| `release-and-changelog.md`    | Both the per-commit `CHANGELOG.md` entry convention and the full release-cut procedure.                                            |
+| `storybook-audit.md`          | Find and fix missing/stale stories, tests, and MDX docs — including auditing _this page_.                                          |
+
+## Claude Code sub-agents (`.claude/agents/`)
+
+Each is scoped to the tools it actually needs:
+
+- **`ui-component-builder`** — wraps `add-component.md`.
+- **`schema-guardian`** — the only agent that should touch
+  `prisma/schema.prisma`; wraps `add-album-layout-variant.md` for
+  layout-shape changes, owns migrations generally.
+- **`storybook-writer`** — wraps `storybook-audit.md`.
+- **`changelog-writer`** — writes a `CHANGELOG.md` `[Unreleased]` entry from
+  the staged diff, right before commit.
+- **`code-reviewer`** — read-only; reviews a diff against `AGENTS.md`'s
+  conventions (naming/placement, accessibility, image performance,
+  admin-route security) without editing anything.
+
+## Claude Code skills (`.claude/skills/`)
+
+Slash-command entry points, one per playbook: `new-component`,
+`new-album-layout-variant`, `backfill-exif`, `release`, `storybook-audit`.
+Each delegates to the matching sub-agent where one exists, or runs the
+playbook directly (`backfill-exif` has no dedicated sub-agent — it's a
+scoped, mostly-mechanical script task).
+
+## Codex CLI prompts (`.codex/prompts/`)
+
+Same five names, same delegation to the same `docs/ai/` files — `/new-component`,
+`/new-album-layout-variant`, `/backfill-exif`, `/release`, `/storybook-audit`.
+Each prompt file states outright that it has no procedure of its own and
+names the playbook that does.
+
+## The `CHANGELOG.md` enforcement hook
+
+`.husky/commit-msg` runs `scripts/check-changelog.mjs`, which blocks any
+commit touching `src/`, `prisma/`, or `docs/` unless `CHANGELOG.md` is staged
+in the same commit — bypassed only by a `chore(release): ...` message or an
+explicit `[skip-changelog]` marker. This is what makes the `changelog-writer`
+agent load-bearing rather than optional: skip it and the commit hook will
+stop you anyway.

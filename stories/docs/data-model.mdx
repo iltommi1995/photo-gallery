@@ -1,0 +1,88 @@
+import { Meta } from "@storybook/addon-docs/blocks";
+
+<Meta title="Docs/Data Model" />
+
+# Data Model
+
+The core relationship: **Album → Chapter → Placement → Photo**. A `Placement`
+is the join between a `Chapter` and a `Photo` — it's where the ordering and
+mosaic size live, so the same `Photo` can appear in multiple albums/chapters
+without duplicating the file.
+
+<div
+  style={{
+    display: "flex",
+    alignItems: "center",
+    gap: "0.75rem",
+    flexWrap: "wrap",
+    margin: "2rem 0",
+    fontFamily: "monospace",
+    fontSize: 13,
+  }}
+>
+  {[
+    ["Album", "slug, title, status, order, coverPhotoId"],
+    ["Chapter", "label, order"],
+    ["Placement", "size, order"],
+    ["Photo", "paths, EXIF, altText"],
+  ].map(([name, fields], i, arr) => (
+    <>
+      <div
+        key={name}
+        style={{
+          border: "1px solid var(--sb-border-color, #8883)",
+          borderRadius: 8,
+          padding: "0.75rem 1rem",
+          minWidth: 150,
+        }}
+      >
+        <div style={{ fontWeight: 700, marginBottom: 4 }}>{name}</div>
+        <div style={{ opacity: 0.65, fontSize: 11 }}>{fields}</div>
+      </div>
+      {i < arr.length - 1 && <span style={{ opacity: 0.5 }}>—has many→</span>}
+    </>
+  ))}
+</div>
+
+`Photo` also has a many-to-many relation to `Tag`, used for search/filtering in
+the admin photo library (`/admin/photos`) — not shown above since it's
+orthogonal to the album structure.
+
+## Field notes
+
+- **`Album.status`**: `DRAFT` | `PUBLISHED`. Only `PUBLISHED` albums are
+  reachable at `/places/[slug]`; draft albums 404 on the public site but are
+  fully visible/editable in the admin panel.
+- **`Album.coverPhotoId`**: a plain photo id, not a foreign key relation —
+  set via the cover-photo picker on the album settings form
+  (`src/components/admin/AlbumSettingsForm.tsx`).
+- **`Placement.size`**: `SMALL | MEDIUM | LARGE | FULL`, mapped to grid spans
+  in `MOSAIC_SIZE_CLASSES` (`src/components/gallery/ChapterMosaic.tsx`) — the
+  single place this mapping is defined. See
+  `docs/ai/add-album-layout-variant.md` before adding a new size.
+- **`Photo`** carries both the storage paths (`originalPath` — the untouched
+  upload, kept for EXIF backfill — plus `thumbnailPath`/`mediumPath`/`fullPath`,
+  the `sharp`-generated display variants) and all EXIF/manual metadata
+  (camera, lens, aperture, shutter speed, ISO, `takenAt`, GPS, plus
+  `isAnalog`/`filmStock` for scanned negatives that have no EXIF at all).
+  `altText` is nullable in the schema but treated as required by the admin
+  metadata form — see `src/lib/schemas/photo.ts`.
+
+## `SiteSettings` — not part of the original spec
+
+A single-row table (`id: "singleton"`) holding the home hero photo, site
+title, and About Me title/body/photo. It isn't part of the Album/Chapter/
+Placement/Photo structure above — it exists because the home hero and About
+page both need admin-editable content to live _somewhere_, and the original
+data-model listing this project started from didn't include one. See
+`prisma/schema.prisma`'s comment on the model for the full reasoning, and
+`src/lib/settings.ts` for how the single row is read/created safely under
+concurrent first-requests (a real race condition hit during a production
+build — see `CHANGELOG.md`).
+
+## Migrations
+
+`prisma/migrations/` — never hand-edit a generated migration's SQL. Schema
+changes go through `pnpm db:migrate` (or the `schema-guardian` Claude Code
+agent / `docs/ai/add-album-layout-variant.md` for layout-shape changes
+specifically).
