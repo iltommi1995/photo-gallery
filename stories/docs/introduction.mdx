@@ -1,0 +1,71 @@
+import { Meta } from "@storybook/addon-docs/blocks";
+
+<Meta title="Docs/Introduction" />
+
+# Photo Gallery
+
+A self-hosted photography portfolio: a public site with a horizontally-scrolling
+album viewer, and a private admin panel for uploading photos and composing each
+album's layout.
+
+## Stack
+
+- **Next.js 16** (App Router, TypeScript strict, Turbopack)
+- **Tailwind CSS v4** — CSS-first config, no `tailwind.config.ts`; design tokens
+  live in `src/app/globals.css` (see the [Design System](/docs/design-system)
+  page)
+- **PostgreSQL + Prisma** (`prisma/schema.prisma`)
+- **Auth.js v5** (Credentials provider, single admin account)
+- **sharp** (image variant generation) + **exifr** (EXIF extraction)
+- **@dnd-kit** (the admin album editor's drag-and-drop)
+- **Vitest + Testing Library** (unit/component tests), **Playwright** (E2E),
+  **Storybook 10** (this documentation)
+
+## Two halves
+
+**Public site** (`src/app/(public)/`) — Home, `/places` (album index),
+`/places/[slug]` (the horizontal-scroll album viewer), `/about`. Everything
+here reads from the database read-only and is statically generated with ISR;
+see [Data Model](/docs/data-model) and [Horizontal Scroll](/docs/horizontal-scroll).
+
+**Admin panel** (`src/app/admin/`, gated by `src/proxy.ts`) — album/chapter/photo
+management. See [Admin Editor](/docs/admin-editor).
+
+## Folder map
+
+```
+src/
+  app/
+    (public)/          Home, /places, /places/[slug], /about — shares SiteNav
+    admin/              Login (public) + (dashboard) route group (gated)
+    api/                Route handlers: admin mutations, NextAuth, media serving
+  components/
+    ui/                  shadcn/ui primitives — admin-facing, neutral theme
+    gallery/             ChapterMosaic — the ONE renderer shared by the admin
+                         live-preview and the public album page
+    public/              Public-site components (nav, hero, lightbox)
+    admin/               Admin components (editor canvas, forms)
+  lib/
+    db.ts, auth.ts, settings.ts
+    schemas/              zod schemas shared by forms and API routes
+    image/, exif/          sharp variant generation, exifr extraction
+    scroll/                useHorizontalScroll
+prisma/
+  schema.prisma, seed.ts, migrations/
+docs/ai/                  AI workflow playbooks — see the AI Workflow page
+.claude/, .codex/          AI tool configuration — thin wrappers over docs/ai/
+```
+
+## Commands
+
+See `AGENTS.md` at the repo root for the full command reference
+(`pnpm dev`, `pnpm test`, `pnpm db:migrate`, etc.) — it's the canonical copy,
+kept in one place rather than duplicated here.
+
+## A note on scope
+
+This documentation describes what's actually implemented, not the aspirational
+version. Where an implementation choice deviates from an original planning
+document (e.g. Prisma major version, Storybook framework, image-format
+strategy), the reasoning is called out inline rather than silently glossed
+over — check `CHANGELOG.md` for the specifics and when each choice was made.

@@ -1,0 +1,73 @@
+import { Meta } from "@storybook/addon-docs/blocks";
+
+<Meta title="Docs/Admin Editor" />
+
+# Admin Editor
+
+`/admin/albums/[id]` — the Behance-style drag-and-drop layout builder, in
+`src/components/admin/album-editor/`.
+
+## Layout
+
+- **Chapter tabs** (`ChapterTabs.tsx`) across the top — click to switch, drag
+  to reorder (a separate `@dnd-kit` `DndContext` from the canvas below,
+  scoped to just the tabs), double-click a label to rename inline, `×` to
+  delete.
+- **Photo library sidebar** (`PhotoLibrarySidebar.tsx` / `PhotoLibraryItem.tsx`)
+  — every uploaded photo, searchable by filename/camera/location/tag. Each
+  thumbnail is a `useDraggable` source (`library:<photoId>`). A photo already
+  placed in the _current_ chapter gets a ring highlight — it can still be
+  dragged in again (photos may repeat across chapters, or even within one,
+  same as reuse across albums).
+- **Chapter canvas** (`ChapterCanvas.tsx` / `ChapterCanvasItem.tsx`) — a
+  `useDroppable` zone wrapping a `SortableContext` of the chapter's
+  placements. Dropping a library photo here appends it (always at the end —
+  reorder afterward via drag, which keeps the drop logic simple). Each
+  placed item shows, on hover/focus: a drag handle (reorder via
+  `useSortable`), a remove button, and four size buttons (S/M/L/F) — click to
+  resize. That satisfies the spec's "resize via click or resize handle"
+  requirement without needing pointer-drag resize math.
+- **Live preview toggle** — swaps the canvas for `ChapterMosaic` rendering
+  the exact same placements, completely unstyled by editor chrome. This is
+  the _actual_ public-site renderer (`src/components/gallery/ChapterMosaic.tsx`),
+  not a lookalike — see [Data Model](/docs/data-model) and
+  [Horizontal Scroll](/docs/horizontal-scroll) for where else it's used.
+
+## Saving
+
+Debounced autosave (1.2s after the last change) with a status indicator
+(`idle` / `unsaved` / `saving` / `saved` / `error`) next to the preview
+toggle. On save, the **entire** active chapter's placement list is sent to
+`PUT /api/admin/chapters/[id]/placements` and replaces what's in the
+database — deleted and recreated in one transaction, not diffed
+field-by-field.
+
+That's a deliberate simplification: a chapter holds at most a few dozen
+photos, so reconciling add/remove/reorder/resize operations individually
+against server state would be meaningfully more code for no real benefit at
+this scale. New placements get a client-only `temp:<uuid>` id until the next
+save round-trip returns the real database rows.
+
+Every mutation (`chapters` create/rename/delete/reorder, `placements`
+replace) also calls `revalidatePath` for the album's public page and the
+`/places` index — see `src/lib/revalidate-public.ts` — so a published
+album's live page reflects changes without waiting for the 1-hour ISR
+fallback window.
+
+## Related admin surfaces
+
+- `/admin/photos` — upload (drag-and-drop, per-file progress) and the
+  metadata form (camera/lens/exposure, film stock for analog scans, inline
+  tag create/assign). altText is enforced as required here even though it's
+  nullable in the schema.
+- `/admin/settings` — home hero photo, site title, About Me content
+  (`SiteSettings` — see [Data Model](/docs/data-model)).
+- Album settings form (title/subtitle/location/status/cover photo) sits
+  above the chapter editor on the same album page.
+
+## Extending it
+
+Adding a new placement size or a named layout preset: read
+`docs/ai/add-album-layout-variant.md` before touching `PlacementSize` or
+`ChapterMosaic`'s size-class mapping — it covers when a change needs a
+migration versus when it's presentation-only.

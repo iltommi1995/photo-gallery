@@ -90,3 +90,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   publish/edit via `revalidatePath` in the relevant admin mutation routes,
   with a 1-hour revalidation window as a fallback rather than the primary
   invalidation mechanism.
+
+### Fixed
+
+- `PhotoPickerSelect` showed the raw photo id instead of its label on
+  first render (base-ui's `Select.Value` only resolves a label from
+  `SelectItem`s that have already mounted, which doesn't happen until the
+  popup opens once) — now formats the label itself via `Select.Value`'s
+  render-prop, found by a Storybook-audit test.
+- Testing Library wasn't auto-cleaning between tests (Vitest globals are
+  off), so unrelated tests could see leftover DOM from previous ones —
+  added an explicit `afterEach(cleanup)` in the shared test setup.
+
+### Added (Storybook)
+
+- Stories + tests for `ChapterMosaic`, `HorizontalScrollProgress`,
+  `AlbumHero`, `SignOutButton`, `PhotoPickerSelect`, and `Lightbox` — the
+  highest-value subset of a 34-component gap (per `docs/ai/storybook-audit.md`'s
+  own "prioritize, don't mass-generate" guidance). Vendored shadcn/ui
+  primitives and the more heavily stateful/fetch-coupled admin
+  components (the album editor internals, upload/metadata/settings
+  forms) are intentionally not yet covered — a real gap, left for a
+  dedicated audit pass rather than padded with shallow coverage.
+- Five MDX documentation pages under `stories/docs/`: Introduction,
+  Data Model, Horizontal Scroll (with a live interactive demo using the
+  real hook), Admin Editor, and AI Workflow (documents `AGENTS.md`, the
+  Claude sub-agents/skills, and the Codex prompts — and calls out that
+  it, more than any component story, is the page most likely to drift
+  from what's actually in `.claude/`/`.codex/`/`docs/ai/`).
