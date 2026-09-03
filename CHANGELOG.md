@@ -56,3 +56,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   chapter holds at most a few dozen photos.
 - `/admin/albums` list and `/admin` dashboard now show real album/photo
   counts.
+- Public album page (`/places/[slug]`): desktop horizontal-scroll viewer
+  (`useHorizontalScroll` — wheel `deltaY` remapped to X with inertial
+  easing, native trackpad `deltaX` passed through untouched, arrow/Home/End
+  keyboard nav, a horizontal progress bar) built on the single-DOM-tree,
+  CSS-only responsive pattern: the same chapter markup is a horizontal
+  snap-track on desktop and a normal vertical stack below the `md`
+  breakpoint (`ChapterMosaic`'s existing 2-column collapse handles the
+  mobile mosaic), so nothing is duplicated or JS-detected for the split.
+  Reuses the Phase 5 `ChapterMosaic` unmodified for chapter rendering.
+- Lightbox (`src/components/public/Lightbox.tsx`): full-resolution image,
+  caption, an EXIF panel (`formatExifLines`, unit tested — camera, lens,
+  exposure, date, location, film stock for analog), and prev/next through
+  the album's full placement order.
+- Only `PUBLISHED` albums are reachable at `/places/[slug]`; draft albums
+  and unknown slugs 404.
