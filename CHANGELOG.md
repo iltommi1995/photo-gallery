@@ -7,6 +7,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (Phase 10 — Docker Compose deployment)
+
+- `docker-compose.yml`: `db` (Postgres, healthchecked), `app` (this Next.js
+  app), `reverse-proxy` (Caddy, automatic Let's Encrypt HTTPS), a pinned
+  `photo-gallery` project name, and a named `photo-gallery-net` network.
+- Multi-stage `Dockerfile` with a dedicated `migrator` build target,
+  because build-time static generation (Home/`/places`/`/about`/published
+  albums) needs the schema's tables to already exist, not just a reachable
+  connection — verified directly (`P2021` when building against an
+  unmigrated database) — and migrations can't run from the `app` image
+  itself, since building it is exactly the step that needs them already
+  applied. `docker-compose.yml`'s `app.build.network` joins the build to
+  `db`'s network. Runtime commands use `node_modules/.bin/{next,prisma,tsx}`
+  directly rather than `pnpm start`/`pnpm prisma`/`pnpm db:seed` — pnpm
+  wraps script execution in a workspace-consistency check that writes a
+  temp file into `/app`, which the non-root runtime user can't do (also
+  verified directly, not hypothetical).
+- `docs/deployment.md`: first-boot (in the now-required order: `db` up →
+  build+run the `migrator` image → optionally seed → build `app` → full
+  stack up), updating, and backup/restore, all reflecting the exact
+  sequence verified against a real build+run (including the two bugs
+  above and their fixes).
+- `scripts/backup.sh`: dumps Postgres (gzipped) and tars the
+  `photo-storage` volume into `./backups/` (or `$BACKUP_DIR`); cron-ready.
+- `.env.example` covers both local dev and production
+  (`docker-compose.yml`) variable sets in one file, clearly marked.
+- `Caddyfile`, `.dockerignore`.
+
+### Fixed
+
+- **`.env.example` was never actually committed** — the `.gitignore`
+  pattern `.env*` (meant for `.env`/`.env.local`) matched the example
+  file too, so it sat untracked since Phase 2 despite every "stage
+  everything" commit since. Added a `!.env.example` exception.
+- **A Compose project-name collision could have destroyed the dev
+  database.** `docker-compose.dev.yml` had no explicit project `name:`,
+  so Compose inferred it from the directory (`photo-gallery`) — identical
+  to `docker-compose.yml`'s pinned name. Running a production-stack
+  command while dev containers existed treated them as the same project
+  and started recreating the dev `db` container into the production
+  shape. Caught while testing this phase, before real data was lost (the
+  named volume survived — Docker doesn't delete volumes on container
+  recreation — but the container did get replaced). Fixed by giving
+  `docker-compose.dev.yml` its own project name (`photo-gallery-dev`) and
+  pinning its volume to the name it already had, so the fix itself
+  doesn't orphan existing dev data.
+
 ### Added (Phase 9 — hardening)
 
 - Playwright E2E suite (`e2e/`): admin login (redirect/reject/success/

@@ -1,0 +1,11 @@
+node_modules
+.next
+storybook-static
+playwright-report
+test-results
+storage
+.git
+.env
+.env.local
+*.log
+coverage
