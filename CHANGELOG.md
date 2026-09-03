@@ -19,3 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `CHANGELOG.md` entry alongside any commit touching `src/`, `prisma/`, or `docs/`.
 - AI development scaffold: `AGENTS.md`, `CLAUDE.md`, `docs/ai/` playbooks,
   `.claude/agents/`, `.claude/skills/`, `.codex/prompts/`.
+- Prisma data model (`Admin`, `Album`, `Chapter`, `Placement`, `Photo`, `Tag`)
+  and initial migration, plus `docker-compose.dev.yml` for a local Postgres
+  instance.
+- Dev seed script generating placeholder photos (gradient JPEGs via `sharp`,
+  fabricated EXIF-like metadata) composed into 3 sample albums/5 chapters,
+  and the initial admin user from `.env`.
