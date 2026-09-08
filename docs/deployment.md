@@ -241,17 +241,30 @@ inbound from the internet to this container:
    sudo ./svc.sh start
    ```
 
-4. The runner's own working directory (`~/actions-runner/_work/<repo>/<repo>`)
-   is where `actions/checkout` puts the code each run — **not**
-   `/opt/photo-gallery`. Either point the runner's work dir _at_
-   `/opt/photo-gallery` (simplest: delete `~/actions-runner/_work` if it
-   already exists, then `ln -s /opt/photo-gallery ~/actions-runner/_work`
-   before starting the service — checkout will then update that same
-   directory every run instead of a separate clone), or just copy your
-   already-created `.env` into the runner's own checkout path once. Either
-   way, the workflow's very first real step fails loudly
-   (`.env is missing`) if this isn't in place, rather than silently
-   deploying with missing secrets.
+4. The runner's own working directory
+   (`~/actions-runner/_work/<repo>/<repo>`) is where `actions/checkout`
+   puts the code each run — **not** `/opt/photo-gallery`, a separate
+   clone. Don't try to symlink `_work` itself at `/opt/photo-gallery` to
+   unify them — tried live, and it doesn't work: `_work` is a parent
+   directory, `actions/checkout` creates the actual `<repo>/<repo>`
+   checkout _inside_ whatever `_work` resolves to, so a symlink there
+   just relocates that nesting into `/opt/photo-gallery` instead of
+   replacing it, silently polluting the manual clone with a second one.
+   Instead, let the runner use its own default `_work` untouched, and
+   copy `.env` into the real checkout path once, after the first run has
+   created it (a fresh runner's very first job fails at the `.env` check
+   below — that's expected, it creates the directory to copy into):
+   ```bash
+   cp /opt/photo-gallery/.env \
+     ~/actions-runner/_work/photo-gallery/photo-gallery/.env
+   ```
+   This only survives across runs because `deploy.yml`'s checkout step
+   sets `clean: false` — the default `actions/checkout` behavior runs
+   `git clean -ffdx` before every checkout, which would otherwise wipe
+   this gitignored file again on the very next deploy (also discovered
+   live: copying it once did not, in fact, stick). The workflow's very
+   first real step fails loudly (`.env is missing`) if this isn't in
+   place, rather than silently deploying with missing secrets.
 5. `svc.sh install` runs the runner as whichever non-root user invoked
    `config.sh` above — that user needs its own network-attached buildx
    builder (see step 5 near the top of this doc), separately from whichever

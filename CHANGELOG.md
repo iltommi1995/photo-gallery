@@ -27,6 +27,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `deploy.yml`'s `.env is missing` check kept failing on the runner even
+  after copying `.env` into its checkout path — `actions/checkout`'s
+  default `git clean -ffdx` wipes untracked files, including that
+  gitignored `.env`, before every single run, discovered live after the
+  same copy-once fix didn't survive a second deploy. The `deploy` job's
+  checkout step now sets `clean: false`, and `docs/deployment.md`'s
+  runner setup no longer suggests symlinking `_work` at `/opt/photo-gallery`
+  either — tried live, and `actions/checkout` creates its checkout
+  *inside* whatever `_work` resolves to, so that just nested a second
+  clone inside the first instead of unifying them.
+
 - `deploy.yml`'s `deploy` job never ran — `runs-on: [self-hosted,
   photo-gallery]` required a custom "photo-gallery" label that the
   self-hosted runner never actually got (its `--labels` flag at

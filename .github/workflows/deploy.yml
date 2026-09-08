@@ -50,7 +50,16 @@ jobs:
       group: photo-gallery-deploy
       cancel-in-progress: false
     steps:
+      # clean: false — checkout's default `git clean -ffdx` wipes untracked
+      # files, including the gitignored .env this job depends on, before
+      # every single run. Discovered live: copying .env into the runner's
+      # workspace once did NOT survive to the next run for exactly this
+      # reason. With clean disabled, .env (created once by hand, see the
+      # step below) persists across deploys same as it would on any other
+      # persistent server.
       - uses: actions/checkout@v4
+        with:
+          clean: false
 
       - name: Check .env exists
         run: |
