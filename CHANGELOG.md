@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `Dockerfile`'s `migrator` stage now runs `prisma generate` at build time.
+  `prisma migrate deploy` doesn't need a generated client, but
+  `prisma/seed.ts` does (`import { PrismaClient } from "@prisma/client"`)
+  — the same image is used to run the seed script per `docs/deployment.md`,
+  and without this it fails with "`@prisma/client` did not initialize yet"
+  on first boot. Generating only reads the schema file, no live `db`
+  connection needed, so it's safe to do at build time here.
+
+- `docker-compose.yml`'s `app.build.network: photo-gallery-net` — recent
+  Compose versions build through BuildKit (`docker buildx bake`), which
+  only accepts `default`/`none`/`host` there and rejects a named bridge
+  network outright, discovered live during a real deployment. Changed to
+  `network: host`, which only does what's needed once paired with a
+  network-attached buildx builder (`docs/deployment.md` step 5, new): for
+  a `docker-container`-driver builder created with `--driver-opt
+  network=photo-gallery-net`, BuildKit's `host` mode means "the builder's
+  own network," which for that builder *is* `photo-gallery-net` — needed
+  once per OS user that runs builds, including the self-hosted CI runner's
+  own user.
+
+- `docs/deployment.md`'s recommended LXC memory bumped from "2–4 GB" to a
+  flat 4 GB (2 GB is not enough — a real deploy hit swap exhaustion and
+  effectively hung during `next build`'s Turbopack compile step at 2 GB
+  RAM / 512 MB swap).
+
 ## [1.0.0] - 2026-09-08
 
 ### Added
