@@ -34,6 +34,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (generates just the route types, no DB/build needed): `typecheck` is now
   `next typegen && tsc --noEmit`.
 
+- `Lightbox`'s "navigates with the right arrow key" test failed
+  deterministically on the GitHub Actions runner (0 calls instead of 1)
+  but passed reliably every local run, including under `CI=true` and
+  `--no-file-parallelism` — never conclusively root-caused, but
+  `user.keyboard()` dispatches to `document.activeElement`, left in an
+  unpredictable state by whichever element the previous test in the file
+  last focused. `Lightbox`'s keydown listener is intentionally
+  window-level (arrow keys work regardless of focus), so the test now
+  exercises it the same way — `fireEvent.keyDown(window, ...)` — instead
+  of relying on ambient focus.
+
 ## [1.0.0] - 2026-09-08
 
 ### Added
