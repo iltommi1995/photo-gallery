@@ -2,16 +2,21 @@ import { revalidatePath } from "next/cache";
 
 import { prisma } from "@/lib/db";
 
-/** Call after any mutation that could change what a published album looks
- * like — the Places index, the album page itself, and (in case its cover
- * photo changed) the home hero. */
+/** Invalidate both collections: a photo can appear in an album and a place. */
+export function revalidatePublicGalleries() {
+  revalidatePath("/places", "layout");
+  revalidatePath("/albums", "layout");
+  revalidatePath("/sitemap.xml");
+}
+
+/** Refresh album pages and their corresponding location collections after edits. */
 export async function revalidateAlbum(albumId: string) {
   const album = await prisma.album.findUnique({
     where: { id: albumId },
     select: { slug: true },
   });
-  revalidatePath("/places");
-  if (album) revalidatePath(`/places/${album.slug}`);
+  revalidatePublicGalleries();
+  if (album) revalidatePath(`/albums/${album.slug}`);
 }
 
 export async function revalidateAlbumByChapter(chapterId: string) {

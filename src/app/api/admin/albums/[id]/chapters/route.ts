@@ -18,13 +18,14 @@ export async function POST(request: Request, { params }: RouteContext) {
   if (!album) return NextResponse.json({ error: "Album not found" }, { status: 404 });
 
   const maxOrder = await prisma.chapter.aggregate({
-    where: { albumId },
+    where: { albumId, viewport: parsed.data.viewport },
     _max: { order: true },
   });
 
   const chapter = await prisma.chapter.create({
     data: {
       albumId,
+      viewport: parsed.data.viewport,
       label: parsed.data.label,
       order: (maxOrder._max.order ?? -1) + 1,
     },

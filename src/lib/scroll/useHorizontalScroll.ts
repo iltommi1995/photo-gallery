@@ -1,61 +1,44 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 
-const DESKTOP_QUERY = "(min-width: 768px)";
+import { GALLERY_WIDE_QUERY } from "@/lib/scroll/breakpoints";
+
 const LERP_FACTOR = 0.15;
-const SNAP_EPSILON = 0.5;
-const SETTLE_WINDOW_MS = 1000;
+const SCROLL_EPSILON = 0.5;
 
-/**
- * Drives the desktop horizontal-scroll album track: remaps vertical mouse
- * wheel input (deltaY) onto the X axis with inertial easing, while letting
- * native trackpad horizontal scroll (deltaX) and touch scroll pass through
- * untouched. Below the md breakpoint this is a no-op — the container is a
- * normal vertical flow there (see AlbumScrollView), so nothing here should
- * fight mobile scrolling.
- */
+/** Continuous desktop X scrolling from vertical wheel input; horizontal
+ * trackpad input and the mobile vertical layout keep their native behavior. */
 export function useHorizontalScroll() {
   const containerRef = useRef<HTMLDivElement>(null);
   const targetRef = useRef(0);
   const rafRef = useRef<number | null>(null);
-  const [progress, setProgress] = useState(0);
+  const progressBarRef = useRef<HTMLDivElement>(null);
+  const progressFillRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
-
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const isDesktop = () => window.matchMedia(DESKTOP_QUERY).matches;
+    const isDesktop = () => window.matchMedia(GALLERY_WIDE_QUERY).matches;
 
-    // Chromium re-resolves `scroll-snap-type: x mandatory` as chapter images
-    // load and shift layout, and can land on the second section instead of
-    // the first — repeatedly, across several frames, so forcibly resetting
-    // scrollLeft loses a same-frame race against the browser's own
-    // re-snapping every time. Instead, remove the snap type entirely for a
-    // short window after mount (nothing to incorrectly snap to), then
-    // restore it — either once things settle, or immediately on the
-    // visitor's first real interaction.
-    container.style.scrollSnapType = "none";
+    // Start at the cover. No snap points or delayed section alignment.
     container.scrollLeft = 0;
-    let settling = true;
-    const settleTimer: ReturnType<typeof setTimeout> = setTimeout(() => {
-      settling = false;
-      // `container` is narrowed non-null above, but TS doesn't carry that
-      // through this closure — it's the same stable ref throughout the effect.
-      container!.style.scrollSnapType = "";
-    }, SETTLE_WINDOW_MS);
-
-    function stopSettling() {
-      if (!settling) return;
-      settling = false;
-      clearTimeout(settleTimer);
-      // `container` is narrowed non-null above, but TS doesn't carry that
-      // through this closure — it's the same stable ref throughout the effect.
-      container!.style.scrollSnapType = "";
-    }
-
     targetRef.current = 0;
+
+    // Update the indicator in the same frame as scrollLeft, without waiting
+    // for React to render the entire gallery during continuous wheel input.
+    function updateProgress(c: HTMLDivElement) {
+      const max = c.scrollWidth - c.clientWidth;
+      const progress = max > 0 ? Math.min(1, Math.max(0, c.scrollLeft / max)) : 0;
+      if (progressFillRef.current)
+        progressFillRef.current.style.transform = `scaleX(${progress})`;
+      progressBarRef.current?.setAttribute(
+        "aria-valuenow",
+        String(Math.round(progress * 100)),
+      );
+    }
+    updateProgress(container);
 
     function stopLoop() {
       if (rafRef.current !== null) {
@@ -73,12 +56,14 @@ export function useHorizontalScroll() {
           return;
         }
         const diff = targetRef.current - c.scrollLeft;
-        if (Math.abs(diff) < SNAP_EPSILON) {
+        if (Math.abs(diff) < SCROLL_EPSILON) {
           c.scrollLeft = targetRef.current;
+          updateProgress(c);
           rafRef.current = null;
           return;
         }
-        c.scrollLeft += diff * LERP_FACTOR;
+        c.scrollLeft += Math.sign(diff) * Math.max(1, Math.abs(diff) * LERP_FACTOR);
+        updateProgress(c);
         rafRef.current = requestAnimationFrame(step);
       };
       rafRef.current = requestAnimationFrame(step);
@@ -86,70 +71,67 @@ export function useHorizontalScroll() {
 
     function onWheel(event: WheelEvent) {
       const c = containerRef.current;
-      if (!c || !isDesktop()) return;
-      if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return; // native horizontal input
-      stopSettling();
+      if (!c || !isDesktop() || event.ctrlKey) return;
+      if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) {
+        stopLoop();
+        targetRef.current = c.scrollLeft;
+        return; // Native horizontal input takes over from wheel easing.
+      }
       event.preventDefault();
       const max = c.scrollWidth - c.clientWidth;
-      targetRef.current = Math.min(max, Math.max(0, targetRef.current + event.deltaY));
+      const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? c.clientWidth : 1;
+      targetRef.current = Math.min(
+        max,
+        Math.max(0, targetRef.current + event.deltaY * unit),
+      );
       if (reducedMotion) {
         c.scrollLeft = targetRef.current;
-      } else {
-        startLoop();
-      }
+        updateProgress(c);
+      } else startLoop();
     }
 
     function onScroll() {
       const c = containerRef.current;
       if (!c) return;
-      const max = c.scrollWidth - c.clientWidth;
-      setProgress(max > 0 ? c.scrollLeft / max : 0);
+      updateProgress(c);
       if (rafRef.current === null) targetRef.current = c.scrollLeft;
-    }
-
-    function sectionOffsets() {
-      const c = containerRef.current;
-      if (!c) return [];
-      return Array.from(c.querySelectorAll<HTMLElement>("[data-scroll-section]")).map(
-        (el) => el.offsetLeft,
-      );
     }
 
     function onKeyDown(event: KeyboardEvent) {
       const c = containerRef.current;
       if (!c || !isDesktop()) return;
       const active = document.activeElement;
-      if (active instanceof HTMLElement && ["INPUT", "TEXTAREA"].includes(active.tagName))
+      if (
+        active instanceof HTMLElement &&
+        (active.isContentEditable ||
+          ["INPUT", "TEXTAREA", "SELECT"].includes(active.tagName))
+      )
         return;
       if (!["ArrowRight", "ArrowLeft", "Home", "End"].includes(event.key)) return;
-
-      stopSettling();
       event.preventDefault();
-      const current = c.scrollLeft;
       const max = c.scrollWidth - c.clientWidth;
-      let next = current;
-
-      if (event.key === "Home") next = 0;
-      else if (event.key === "End") next = max;
-      else {
-        const offsets = sectionOffsets();
-        if (event.key === "ArrowRight") {
-          next = offsets.find((o) => o > current + 5) ?? max;
-        } else {
-          next = [...offsets].reverse().find((o) => o < current - 5) ?? 0;
-        }
-      }
-
+      const step = c.clientWidth * 0.15;
+      const next =
+        event.key === "Home"
+          ? 0
+          : event.key === "End"
+            ? max
+            : Math.max(
+                0,
+                Math.min(max, c.scrollLeft + (event.key === "ArrowRight" ? step : -step)),
+              );
+      stopLoop();
       targetRef.current = next;
       c.scrollTo({ left: next, behavior: reducedMotion ? "auto" : "smooth" });
     }
 
+    const resizeObserver = new ResizeObserver(() => updateProgress(container));
+    resizeObserver.observe(container);
     container.addEventListener("wheel", onWheel, { passive: false });
     container.addEventListener("scroll", onScroll, { passive: true });
     container.addEventListener("keydown", onKeyDown);
-
     return () => {
-      stopSettling();
+      resizeObserver.disconnect();
       container.removeEventListener("wheel", onWheel);
       container.removeEventListener("scroll", onScroll);
       container.removeEventListener("keydown", onKeyDown);
@@ -157,5 +139,5 @@ export function useHorizontalScroll() {
     };
   }, []);
 
-  return { containerRef, progress };
+  return { containerRef, progressBarRef, progressFillRef };
 }

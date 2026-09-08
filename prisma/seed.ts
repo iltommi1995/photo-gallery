@@ -9,7 +9,7 @@ import { randomUUID } from "node:crypto";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 
-import { PrismaClient, type PlacementSize } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import sharp from "sharp";
 
@@ -177,13 +177,15 @@ async function main() {
   );
   const tagByslug = Object.fromEntries(tags.map((t) => [t.slug, t]));
 
-  const placementSizes: PlacementSize[] = [
-    "FULL",
-    "MEDIUM",
-    "MEDIUM",
-    "SMALL",
-    "SMALL",
-    "LARGE",
+  // Same rotation as the old FULL/MEDIUM/MEDIUM/SMALL/SMALL/LARGE presets,
+  // expressed as explicit colSpan x rowSpan on the fixed 12x12 grid.
+  const placementSpans: { colSpan: number; rowSpan: number }[] = [
+    { colSpan: 12, rowSpan: 6 },
+    { colSpan: 6, rowSpan: 3 },
+    { colSpan: 6, rowSpan: 3 },
+    { colSpan: 3, rowSpan: 3 },
+    { colSpan: 3, rowSpan: 3 },
+    { colSpan: 6, rowSpan: 6 },
   ];
 
   // --- Album: Milan --------------------------------------------------
@@ -298,7 +300,7 @@ async function main() {
       chapterId: milan.chapters[0].id,
       photoId: p.id,
       order: i,
-      size: placementSizes[i % placementSizes.length],
+      ...placementSpans[i % placementSpans.length],
     })),
   });
   await prisma.placement.createMany({
@@ -306,9 +308,10 @@ async function main() {
       chapterId: milan.chapters[1].id,
       photoId: p.id,
       order: i,
-      size: placementSizes[(i + 2) % placementSizes.length],
+      ...placementSpans[(i + 2) % placementSpans.length],
     })),
   });
+
   await prisma.album.update({
     where: { id: milan.id },
     data: { coverPhotoId: milanDayPhotos[0].id },
@@ -419,7 +422,7 @@ async function main() {
       chapterId: berlin.chapters[0].id,
       photoId: p.id,
       order: i,
-      size: placementSizes[i % placementSizes.length],
+      ...placementSpans[i % placementSpans.length],
     })),
   });
   await prisma.placement.createMany({
@@ -427,7 +430,7 @@ async function main() {
       chapterId: berlin.chapters[1].id,
       photoId: p.id,
       order: i,
-      size: i === 0 ? "FULL" : "MEDIUM",
+      ...(i === 0 ? { colSpan: 12, rowSpan: 6 } : { colSpan: 6, rowSpan: 3 }),
     })),
   });
   await prisma.album.update({
@@ -484,7 +487,7 @@ async function main() {
       chapterId: dresden.chapters[0].id,
       photoId: p.id,
       order: i,
-      size: i === 0 ? "LARGE" : "MEDIUM",
+      ...(i === 0 ? { colSpan: 6, rowSpan: 6 } : { colSpan: 6, rowSpan: 3 }),
     })),
   });
   await prisma.album.update({

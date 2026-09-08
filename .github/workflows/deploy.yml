@@ -1,0 +1,92 @@
+name: Deploy
+
+# Push to main: verify the code (GitHub-hosted runner, fast, no homelab
+# access needed), then — only if that passes — build and deploy on the
+# self-hosted runner that lives on the target host itself. That runner
+# polls GitHub outbound; nothing needs to be reachable from the internet
+# for this to work. See docs/deployment.md for the one-time host setup
+# (Docker, this runner, the .env file the deploy job expects to find
+# already in place) and for the manual equivalent of the deploy steps
+# below, if you ever need to run them by hand.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test
+
+  deploy:
+    needs: verify
+    runs-on: [self-hosted, photo-gallery]
+    # A previous run's next build can still be starting up when a second
+    # push lands seconds later — let one deploy finish before the next
+    # starts, rather than two `docker compose build app`s racing on the
+    # same working directory.
+    concurrency:
+      group: photo-gallery-deploy
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check .env exists
+        run: |
+          if [ ! -f .env ]; then
+            echo "::error::.env is missing from the runner's working directory ($(pwd))."
+            echo "::error::It's gitignored on purpose — create it once by hand per docs/deployment.md, it isn't part of this checkout."
+            exit 1
+          fi
+
+      - name: Start db and wait for it to be healthy
+        run: |
+          docker compose up -d db
+          for i in $(seq 1 30); do
+            if docker compose ps db | grep -q healthy; then
+              echo "db is healthy"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::db did not become healthy in time"
+          docker compose logs db
+          exit 1
+
+      - name: Run migrations
+        run: |
+          docker build --target migrator -t photo-gallery-migrator .
+          docker run --rm --network photo-gallery-net --env-file .env \
+            photo-gallery-migrator
+
+      - name: Build and deploy app
+        run: |
+          docker compose build app
+          docker compose up -d app
+
+      - name: Wait for the app to respond
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fs http://localhost:3000/ -o /dev/null; then
+              echo "app is up"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::app did not respond in time after deploy"
+          docker compose logs app
+          exit 1
+
+      - name: Clean up dangling images
+        if: always()
+        run: docker image prune -f

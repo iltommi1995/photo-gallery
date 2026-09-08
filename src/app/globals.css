@@ -4,6 +4,24 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* The horizontal-scroll album/place experience needs real width AND
+ * landscape orientation to make sense — not just "wide enough". A desktop
+ * browser window is always landscape in practice, so this is a no-op
+ * there; a phone only qualifies once rotated. Replaces `md:`/`sm:` in the
+ * gallery-specific components (AlbumScrollView, ChapterMosaic, AlbumHero,
+ * HorizontalScrollProgress) — see also useHorizontalScroll's matching
+ * DESKTOP_QUERY, which must stay in sync with this condition. */
+@custom-variant gallery-wide (@media (orientation: landscape) and (min-width: 640px));
+
+/* A rotated phone satisfies gallery-wide too (it's landscape and wide
+ * enough) but has far less absolute height than a real desktop window —
+ * titles sized/positioned and padding tuned for desktop end up too big and
+ * too tall there. 500px catches phones in landscape (typically 320-430px
+ * tall) without catching real desktop browser windows, which are virtually
+ * never shorter than that. Layer *after* gallery-wide overrides on the same
+ * elements to shrink them further just for this case. */
+@custom-variant gallery-short (@media (orientation: landscape) and (max-height: 500px));
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -96,12 +114,13 @@
      Fixed regardless of OS color scheme — the public site is not a
      light/dark themeable surface, it's the photographer's brand. */
   --portfolio-ink: #111111;
-  --portfolio-paper: #ffffff;
+  --portfolio-paper: #f8f7f5;
   --portfolio-accent: #c0392b;
   --portfolio-accent-dim: #8e2a20;
   --portfolio-overlay: rgb(0 0 0 / 55%);
   --portfolio-font-heading: var(--font-bebas-neue), var(--font-geist-sans);
   --portfolio-font-body: var(--font-geist-sans);
+  --portfolio-font-mono: var(--font-courier-prime), var(--font-geist-mono);
   --portfolio-gutter: 1.5rem;
 }
 
@@ -142,11 +161,81 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    scrollbar-width: none;
   }
+  *::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* The home is a single viewport; other pages keep native scrolling. */
+  html:has([data-home-hero]),
+  body:has([data-home-hero]) {
+    overflow: hidden;
+  }
+
   body {
     @apply bg-background text-foreground;
   }
   html {
     @apply font-sans;
   }
+}
+
+/* Reserve a dedicated rail for the fixed menu on content pages. */
+:root {
+  --portfolio-menu-rail: 5.5rem;
+}
+
+@media (min-width: 640px) {
+  :root {
+    --portfolio-menu-rail: 6.5rem;
+  }
+}
+
+.portfolio-content:not(:has([data-home-hero], [data-gallery-view])) {
+  margin-left: var(--portfolio-menu-rail);
+}
+
+/* The lightbox's own prev/next arrows sit at the same left-center spot as
+ * the fixed nav toggle (Lightbox.tsx portals to body, same as SiteNav's
+ * fixed button) — hide the toggle while a photo is open so they don't
+ * overlap. */
+body:has([data-lightbox-open]) [data-site-nav-toggle] {
+  display: none;
+}
+
+/* Portrait-mobile's nav toggle sits top-left (see SiteNav.tsx); the
+ * RotateDeviceNotice banner (dismissible, portrait-only) is also fixed at
+ * the very top and can wrap to 2 lines. Push the toggle below it while the
+ * notice is showing rather than overlapping. Doesn't affect gallery-wide,
+ * where the toggle moves to left-center and the notice never shows. */
+body:has([data-rotate-notice]) [data-site-nav-toggle] {
+  top: 6rem;
+}
+
+/* Text-block placements (ChapterMosaic) — plain, editorial paragraph text,
+ * not a rich-text framework's default styling. */
+.prose-portfolio-text {
+  color: var(--portfolio-ink);
+  font-family: var(--portfolio-font-mono);
+  font-size: 0.9rem;
+  line-height: 1.7;
+}
+.prose-portfolio-text p + p {
+  margin-top: 0.75em;
+}
+.prose-portfolio-text a {
+  color: var(--portfolio-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Photographic-grain paper texture for the public site background, instead
+ * of a flat fill — an SVG feTurbulence noise tile layered over
+ * --portfolio-paper, tiled at a size small enough to read as grain rather
+ * than a repeating pattern. */
+.bg-portfolio-grain {
+  background-color: var(--portfolio-paper);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.2 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
 }

@@ -8,6 +8,14 @@ const optionalTrimmedString = (max: number) =>
     .optional()
     .transform((v) => (v === "" ? undefined : v));
 
+/** Empty-string form inputs must become `undefined`, not reach z.coerce:
+ * z.coerce.number() on "" reads as `Number("") === 0`, which then fails a
+ * `.positive()` check even though the field is optional — same problem
+ * with z.coerce.date() on "" (produces an Invalid Date). Wrap every
+ * optional coerced field in this so leaving it blank actually means
+ * "no value" instead of silently blocking the whole form. */
+const emptyToUndefined = (v: unknown) => (v === "" ? undefined : v);
+
 /**
  * Metadata form — used both to finalize a freshly uploaded photo and to
  * hand-edit an existing one (notably every `isAnalog` photo, which has no
@@ -21,14 +29,23 @@ export const photoMetadataSchema = z.object({
   cameraMake: optionalTrimmedString(100),
   cameraModel: optionalTrimmedString(100),
   lens: optionalTrimmedString(150),
-  focalLengthMm: z.coerce.number().positive().max(2000).optional(),
-  aperture: z.coerce.number().positive().max(64).optional(),
+  focalLengthMm: z.preprocess(
+    emptyToUndefined,
+    z.coerce.number().positive().max(2000).optional(),
+  ),
+  aperture: z.preprocess(
+    emptyToUndefined,
+    z.coerce.number().positive().max(64).optional(),
+  ),
   shutterSpeed: optionalTrimmedString(20),
-  iso: z.coerce.number().int().positive().max(1_000_000).optional(),
-  takenAt: z.coerce.date().optional(),
+  iso: z.preprocess(
+    emptyToUndefined,
+    z.coerce.number().int().positive().max(1_000_000).optional(),
+  ),
+  takenAt: z.preprocess(emptyToUndefined, z.coerce.date().optional()),
   locationName: optionalTrimmedString(200),
-  gpsLat: z.coerce.number().min(-90).max(90).optional(),
-  gpsLng: z.coerce.number().min(-180).max(180).optional(),
+  gpsLat: z.preprocess(emptyToUndefined, z.coerce.number().min(-90).max(90).optional()),
+  gpsLng: z.preprocess(emptyToUndefined, z.coerce.number().min(-180).max(180).optional()),
   isAnalog: z.coerce.boolean().default(false),
   filmStock: optionalTrimmedString(100),
   tagIds: z.array(z.string()).optional(),

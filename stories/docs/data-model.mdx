@@ -22,8 +22,8 @@ without duplicating the file.
 >
   {[
     ["Album", "slug, title, status, order, coverPhotoId"],
-    ["Chapter", "label, order"],
-    ["Placement", "size, order"],
+    ["Chapter", "label, order, viewport"],
+    ["Placement", "colSpan, rowSpan, gridColumn, gridRow, order"],
     ["Photo", "paths, EXIF, altText"],
   ].map(([name, fields], i, arr) => (
     <>
@@ -56,10 +56,40 @@ orthogonal to the album structure.
 - **`Album.coverPhotoId`**: a plain photo id, not a foreign key relation —
   set via the cover-photo picker on the album settings form
   (`src/components/admin/AlbumSettingsForm.tsx`).
-- **`Placement.size`**: `SMALL | MEDIUM | LARGE | FULL`, mapped to grid spans
-  in `MOSAIC_SIZE_CLASSES` (`src/components/gallery/ChapterMosaic.tsx`) — the
-  single place this mapping is defined. See
-  `docs/ai/add-album-layout-variant.md` before adding a new size.
+- **`Placement.colSpan` / `Placement.rowSpan`**: a free width × height in
+  cells on the fixed 12×12 grid (`src/lib/gallery/grid.ts`), chosen per photo
+  in the admin canvas rather than picked from a fixed size preset.
+- **`Placement.gridColumn` / `Placement.gridRow`**: optional, one-based
+  grid coordinates chosen in the chapter editor. Existing placements keep
+  automatic layout until positioned; saving coordinates preserves intentional
+  gaps in the shared gallery renderer.
+- **`Chapter.viewport`**: `WEB` (default) | `MOBILE_LANDSCAPE` |
+  `MOBILE_PORTRAIT`. A chapter belongs to exactly one — so an album's
+  _chapter structure itself_ (how many chapters, their labels, their
+  order), not just each chapter's photo content, can differ per context.
+  An album's `WEB` chapters are the only ones that exist until an admin
+  opts in via the Web / Mobile horizontal / Mobile vertical switch in the
+  admin editor; creating chapters under either mobile value builds a fully
+  independent structure for that context. Two separate mobile values, not
+  one shared "mobile" structure, because a layout authored for a wide
+  landscape phone doesn't translate to a narrow portrait one (or back) —
+  chapter counts and spans/positions chosen for one render as paper-thin,
+  broken slivers (or an awkward split) in the other. Whether a context "has
+  an override" is a derived fact (any chapters of that viewport exist for
+  the album), not a stored flag — the admin editor's "Clone from Web"
+  action (`POST /api/admin/albums/[id]/chapters/clone`) gives a mobile
+  context an editable starting point instead of a blank canvas, since
+  authoring N chapters from scratch is a lot more work than restructuring a
+  copy. No `WEB` chapters for the album → the album has no chapters at all
+  (the empty-album state). No chapters for a mobile context → that context
+  falls back to rendering `WEB`'s chapters: `MOBILE_LANDSCAPE`'s fallback
+  is still a real grid (this context sits inside the `gallery-wide` CSS
+  breakpoint regardless of which chapters are fed in); `MOBILE_PORTRAIT`'s
+  fallback is `WEB`'s _photos_ in the ordinary single-full-width-row
+  flatten, not their spans/positions. `Placement` itself carries no
+  viewport of its own — it inherits its parent chapter's. See
+  `docs/ai/add-album-layout-variant.md` and `ChapterMosaic`'s `forceGrid`
+  prop.
 - **`Photo`** carries both the storage paths (`originalPath` — the untouched
   upload, kept for EXIF backfill — plus `thumbnailPath`/`mediumPath`/`fullPath`,
   the `sharp`-generated display variants) and all EXIF/manual metadata

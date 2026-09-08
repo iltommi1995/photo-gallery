@@ -1,49 +1,88 @@
 "use client";
 
 import { useDroppable } from "@dnd-kit/core";
-import { SortableContext } from "@dnd-kit/sortable";
-import type { PlacementSize } from "@prisma/client";
-
-import { cn } from "@/lib/utils";
+import { GRID_COLUMNS, GRID_MAX_ROWS, resolveGrid } from "@/lib/gallery/grid";
 import { ChapterCanvasItem } from "./ChapterCanvasItem";
 import type { EditorPlacement } from "./types";
 
 type ChapterCanvasProps = {
   placements: EditorPlacement[];
-  onResize: (placementId: string, size: PlacementSize) => void;
+  dropTarget?: {
+    gridColumn: number;
+    gridRow: number;
+    colSpan: number;
+    rowSpan: number;
+    valid: boolean;
+  } | null;
+  onResize: (placementId: string, colSpan: number, rowSpan: number) => void;
   onRemove: (placementId: string) => void;
+  onMove: (placementId: string, column: number, row: number) => void;
+  onToggleAspectRatio: (placementId: string) => void;
+  onEditText: (placementId: string) => void;
 };
 
-export function ChapterCanvas({ placements, onResize, onRemove }: ChapterCanvasProps) {
-  const { setNodeRef, isOver } = useDroppable({ id: "canvas-dropzone" });
-
+export function ChapterCanvas({
+  placements,
+  dropTarget,
+  onResize,
+  onRemove,
+  onMove,
+  onToggleAspectRatio,
+  onEditText,
+}: ChapterCanvasProps) {
+  const { setNodeRef } = useDroppable({ id: "canvas-dropzone" });
+  const positioned = resolveGrid(placements);
   return (
-    <div
-      ref={setNodeRef}
-      data-testid="chapter-canvas-dropzone"
-      className={cn(
-        "min-h-64 rounded-lg border-2 border-dashed p-3 transition-colors",
-        isOver ? "border-primary bg-muted/50" : "border-border",
-      )}
-    >
-      {placements.length === 0 ? (
-        <p className="text-muted-foreground flex h-56 items-center justify-center text-sm">
-          Drag photos here from the library to build this chapter.
-        </p>
-      ) : (
-        <SortableContext items={placements.map((p) => p.id)}>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:auto-rows-[9rem]">
-            {placements.map((placement) => (
-              <ChapterCanvasItem
-                key={placement.id}
-                placement={placement}
-                onResize={(size) => onResize(placement.id, size)}
-                onRemove={() => onRemove(placement.id)}
-              />
-            ))}
-          </div>
-        </SortableContext>
-      )}
+    <div className="min-w-0 rounded-lg border p-3">
+      <p className="text-muted-foreground mb-3 text-sm">
+        Fixed {GRID_COLUMNS}x{GRID_MAX_ROWS} grid. Drag a photo to a cell. Leave empty
+        cells for spacing. Use the arrow keys on a photo to move it.
+      </p>
+      <div className="overflow-auto">
+        <div
+          ref={setNodeRef}
+          data-testid="chapter-canvas-dropzone"
+          className="relative grid min-w-[1080px] gap-2"
+          style={{
+            gridTemplateColumns: `repeat(${GRID_COLUMNS}, 1fr)`,
+            gridTemplateRows: `repeat(${GRID_MAX_ROWS}, 72px)`,
+          }}
+        >
+          {Array.from({ length: GRID_MAX_ROWS * GRID_COLUMNS }, (_, index) => (
+            <div
+              key={index}
+              data-grid-cell={`${(index % GRID_COLUMNS) + 1}:${Math.floor(index / GRID_COLUMNS) + 1}`}
+              className="pointer-events-none rounded border border-dashed bg-muted/30 text-muted-foreground/60 p-1 text-[0.6rem]"
+              style={{
+                gridColumn: (index % GRID_COLUMNS) + 1,
+                gridRow: Math.floor(index / GRID_COLUMNS) + 1,
+              }}
+            >
+              {Math.floor(index / GRID_COLUMNS) + 1} · {(index % GRID_COLUMNS) + 1}
+            </div>
+          ))}
+          {positioned.map((placement) => (
+            <ChapterCanvasItem
+              key={placement.id}
+              placement={placement}
+              onResize={(colSpan, rowSpan) => onResize(placement.id, colSpan, rowSpan)}
+              onRemove={() => onRemove(placement.id)}
+              onMove={(column, row) => onMove(placement.id, column, row)}
+              onToggleAspectRatio={() => onToggleAspectRatio(placement.id)}
+              onEditText={() => onEditText(placement.id)}
+            />
+          ))}
+          {dropTarget && (
+            <div
+              className={`pointer-events-none z-20 rounded border-2 ${dropTarget.valid ? "border-primary bg-primary/15" : "border-destructive bg-destructive/20"}`}
+              style={{
+                gridColumn: `${dropTarget.gridColumn} / span ${dropTarget.colSpan}`,
+                gridRow: `${dropTarget.gridRow} / span ${dropTarget.rowSpan}`,
+              }}
+            />
+          )}
+        </div>
+      </div>
     </div>
   );
 }

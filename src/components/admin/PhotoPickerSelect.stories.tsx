@@ -12,7 +12,15 @@ const PHOTOS = [
 const meta = {
   title: "Admin/PhotoPickerSelect",
   component: PhotoPickerSelect,
-  parameters: { layout: "centered" },
+  parameters: {
+    layout: "centered",
+    docs: {
+      description: {
+        component:
+          "Visual picker with paginated thumbnails, search and upload. Opening the modal loads /api/admin/photos and requires an authenticated app session.",
+      },
+    },
+  },
 } satisfies Meta<typeof PhotoPickerSelect>;
 
 export default meta;

@@ -1,126 +1,74 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
-
-import { AlbumScrollView } from "@/components/public/AlbumScrollView";
+import { notFound, permanentRedirect } from "next/navigation";
+import { AlbumScrollView, type ScrollChapter } from "@/components/public/AlbumScrollView";
+import { getPublicPlaces } from "@/lib/public-places";
+import { groupPhotosByYear } from "@/lib/places";
 import { prisma } from "@/lib/db";
 
-// Published albums are pre-rendered at build time and revalidated on
-// publish/edit (see revalidatePath calls in the album/chapter API routes)
-// rather than on a fixed interval — an hour is just a safety net.
 export const revalidate = 3600;
-
-type AlbumPageProps = {
-  params: Promise<{ slug: string }>;
-};
-
-function siteUrl() {
-  return process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
-}
+type PlacePageProps = { params: Promise<{ slug: string }> };
 
 export async function generateStaticParams() {
-  const albums = await prisma.album.findMany({
-    where: { status: "PUBLISHED" },
-    select: { slug: true },
-  });
-  return albums.map((album) => ({ slug: album.slug }));
+  return (await getPublicPlaces()).map(({ slug }) => ({ slug }));
 }
 
-async function getAlbum(slug: string) {
-  return prisma.album.findFirst({
-    where: { slug, status: "PUBLISHED" },
-    include: {
-      chapters: {
-        orderBy: { order: "asc" },
-        include: {
-          placements: { orderBy: { order: "asc" }, include: { photo: true } },
-        },
-      },
-    },
-  });
-}
-
-async function getCoverPhoto(coverPhotoId: string | null) {
-  if (!coverPhotoId) return null;
-  return prisma.photo.findUnique({
-    where: { id: coverPhotoId },
-    select: { id: true, altText: true, blurDataUrl: true, width: true, height: true },
-  });
-}
-
-export async function generateMetadata({ params }: AlbumPageProps): Promise<Metadata> {
+export async function generateMetadata({ params }: PlacePageProps): Promise<Metadata> {
   const { slug } = await params;
-  const album = await getAlbum(slug);
-  if (!album) return {};
-
-  const cover = await getCoverPhoto(album.coverPhotoId);
-  const description = album.description ?? album.subtitle ?? undefined;
-  const url = `${siteUrl()}/places/${album.slug}`;
-
-  return {
-    title: album.title,
-    description,
-    alternates: { canonical: url },
-    openGraph: {
-      title: album.title,
-      description,
-      url,
-      type: "website",
-      images: cover
-        ? [
-            {
-              url: `${siteUrl()}/api/media/${cover.id}/full`,
-              width: cover.width,
-              height: cover.height,
-              alt: cover.altText ?? album.title,
-            },
-          ]
-        : undefined,
-    },
-  };
+  const place = (await getPublicPlaces()).find(
+    (place) => encodeURIComponent(place.slug) === slug || place.slug === slug,
+  );
+  return place
+    ? {
+        title: place.name,
+        alternates: { canonical: `/places/${encodeURIComponent(place.slug)}` },
+      }
+    : {};
 }
 
-export default async function AlbumPage({ params }: AlbumPageProps) {
+export default async function PlacePage({ params }: PlacePageProps) {
   const { slug } = await params;
-  const album = await getAlbum(slug);
-  if (!album) notFound();
-
-  const coverPhoto = await getCoverPhoto(album.coverPhotoId);
-
-  const allPhotos = album.chapters.flatMap((c) => c.placements.map((p) => p.photo));
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "ImageGallery",
-    name: album.title,
-    description: album.description ?? album.subtitle ?? undefined,
-    url: `${siteUrl()}/places/${album.slug}`,
-    image: allPhotos.map((photo) => ({
-      "@type": "Photograph",
-      contentUrl: `${siteUrl()}/api/media/${photo.id}/full`,
-      name: photo.caption ?? photo.altText ?? undefined,
-      ...(photo.locationName ? { contentLocation: photo.locationName } : {}),
-      ...(photo.takenAt ? { dateCreated: photo.takenAt.toISOString() } : {}),
-    })),
-  };
-
+  const place = (await getPublicPlaces()).find(
+    (place) => encodeURIComponent(place.slug) === slug || place.slug === slug,
+  );
+  if (!place) {
+    // Preserve links to albums shared before Places became a location archive.
+    const album = await prisma.album.findFirst({
+      where: { slug, status: "PUBLISHED" },
+      select: { slug: true },
+    });
+    if (album) permanentRedirect(`/albums/${album.slug}`);
+    notFound();
+  }
+  const chapters: ScrollChapter[] = groupPhotosByYear(place.photos).flatMap(
+    ({ label, photos }) => {
+      const sections: ScrollChapter[] = [];
+      // Keep long years in manageable mosaics without changing chronological order.
+      for (let offset = 0; offset < photos.length; offset += 8) {
+        sections.push({
+          id: `${place.slug}-${label}-${offset}`,
+          label,
+          placements: photos.slice(offset, offset + 8).map((photo) => ({
+            id: photo.id,
+            type: "PHOTO" as const,
+            colSpan: 3,
+            rowSpan: 3,
+            photo,
+          })),
+        });
+      }
+      return sections;
+    },
+  );
   return (
-    <>
-      <script
-        type="application/ld+json"
-        // Escape "<" so admin-entered text (caption, location) can't break
-        // out of the script tag via a literal "</script>" substring.
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),
-        }}
-      />
-      <AlbumScrollView
-        title={album.title}
-        coverPhoto={coverPhoto}
-        chapters={album.chapters.map((chapter) => ({
-          id: chapter.id,
-          label: chapter.label,
-          placements: chapter.placements,
-        }))}
-      />
-    </>
+    <AlbumScrollView
+      title={place.name}
+      coverPhoto={place.photos[0]}
+      webChapters={chapters}
+      // Synthesized on the fly from photos grouped by year — there's no
+      // admin-authored Chapter row here to hold a mobile override, so this
+      // view never has one; it always falls back to the chapters above.
+      mobileLandscapeChapters={[]}
+      mobilePortraitChapters={[]}
+    />
   );
 }

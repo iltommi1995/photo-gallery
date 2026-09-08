@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 
 import { AlbumEditor } from "@/components/admin/album-editor/AlbumEditor";
 import { AlbumSettingsForm } from "@/components/admin/AlbumSettingsForm";
+import { groupChaptersByViewport } from "@/lib/gallery/placement-mapping";
 import { prisma } from "@/lib/db";
 
 type AlbumEditorPageProps = {
@@ -16,7 +17,7 @@ export default async function AlbumEditorPage({ params }: AlbumEditorPageProps) 
       where: { id },
       include: {
         chapters: {
-          orderBy: { order: "asc" },
+          orderBy: [{ viewport: "asc" }, { order: "asc" }],
           include: {
             placements: {
               orderBy: { order: "asc" },
@@ -31,10 +32,19 @@ export default async function AlbumEditorPage({ params }: AlbumEditorPageProps) 
 
   if (!album) notFound();
 
+  const { webChapters, mobileLandscapeChapters, mobilePortraitChapters } =
+    groupChaptersByViewport(album.chapters);
+
   return (
     <div className="flex flex-col gap-6">
       <AlbumSettingsForm album={album} photos={allPhotos} />
-      <AlbumEditor album={album} initialChapters={album.chapters} allPhotos={allPhotos} />
+      <AlbumEditor
+        album={album}
+        initialWebChapters={webChapters}
+        initialMobileLandscapeChapters={mobileLandscapeChapters}
+        initialMobilePortraitChapters={mobilePortraitChapters}
+        allPhotos={allPhotos}
+      />
     </div>
   );
 }
