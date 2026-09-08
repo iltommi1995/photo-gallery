@@ -18,6 +18,13 @@ const LOGIN_RATE_LIMIT = { max: 8, windowMs: 60_000 };
 // there's no separate CSRF token scheme here; adding one would be
 // redundant for this single-admin app.
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  // Required outside Vercel (which auto-detects and trusts its own host) —
+  // without it Auth.js refuses to trust the incoming Host header from a
+  // reverse proxy like Nginx Proxy Manager and every request 500s with a
+  // generic "Configuration" error, discovered live in production. NPM is
+  // the only thing that can reach this app's port, so trusting the host it
+  // forwards is safe here.
+  trustHost: true,
   session: { strategy: "jwt" },
   pages: { signIn: "/admin/login" },
   providers: [
