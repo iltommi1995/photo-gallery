@@ -44,3 +44,31 @@ storybook`, `pnpm test`, and a manual pass through the admin editor to
 
 6. **Changelog + docs.** `CHANGELOG.md` entry, and update
    `stories/docs/data-model.mdx` if the schema changed.
+
+## Adding a viewport variant (mobile layout overrides)
+
+This playbook predates `Placement.colSpan`/`rowSpan` (see
+`stories/docs/data-model.mdx` for the current field list — the size-preset
+enum described above was replaced) and predates `Chapter.viewport` (`WEB` |
+`MOBILE_LANDSCAPE` | `MOBILE_PORTRAIT`), which lets an admin optionally
+author a fully independent _chapter structure_ — count, labels, order, and
+each chapter's own placements — for landscape mobile, portrait mobile, or
+both, separately from Web. It lives on `Chapter`, not `Placement`: a
+placement inherits its viewport from its parent chapter, since a chapter
+belongs to exactly one context. This is why chapter counts can differ per
+context (Web 3 chapters, Mobile 5), not just each chapter's photo content —
+an earlier version of this had `viewport` on `Placement` instead, which
+only allowed the _content_ of otherwise-shared chapters to differ; that
+turned out not to be enough (a chapter grouping that makes sense on Web
+doesn't necessarily make sense on Mobile either).
+
+The steps above still apply to a genuinely new variant; for the viewport
+case specifically, the render-time choice lives in `ChapterMosaic`'s
+`forceGrid` prop and `AlbumScrollView`'s `useDeviceContext` hook
+(`src/lib/scroll/breakpoints.ts`), not in `ChapterMosaic` branching on the
+enum directly — it only ever receives whichever one chapter list its
+caller already resolved (`groupChaptersByViewport` in
+`src/lib/gallery/placement-mapping.ts`, shared by the public and admin
+loaders). The admin editor's "Clone from Web" action
+(`POST /api/admin/albums/[id]/chapters/clone`) deep-copies Web's chapters
+and placements as an editable starting point for an empty mobile context.

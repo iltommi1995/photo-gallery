@@ -41,20 +41,31 @@ enum AlbumStatus {
   PUBLISHED
 }
 
+// How consecutive chapters flow into one another on the public album page.
+// PAGED (default) is the current behavior: each chapter is its own section
+// with breathing-room padding around it. CONTINUOUS removes that padding so
+// chapters run into each other with no visible gap, reading as one page.
+enum ChapterLayout {
+  PAGED
+  CONTINUOUS
+}
+
 model Album {
-  id           String      @id @default(cuid())
-  slug         String      @unique
-  title        String
-  subtitle     String?
-  description  String?
-  coverPhotoId String?
-  locationName String?
-  countryCode  String?
-  status       AlbumStatus @default(DRAFT)
-  order        Int         @default(0)
-  chapters     Chapter[]
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
+  id                String        @id @default(cuid())
+  slug              String        @unique
+  title             String
+  subtitle          String?
+  description       String?
+  coverPhotoId      String?
+  locationName      String?
+  countryCode       String?
+  status            AlbumStatus   @default(DRAFT)
+  order             Int           @default(0)
+  showChapterLabels Boolean       @default(true)
+  chapterLayout     ChapterLayout @default(PAGED)
+  chapters          Chapter[]
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
 
   @@index([status, order])
 }
@@ -63,30 +74,60 @@ model Chapter {
   id         String      @id @default(cuid())
   albumId    String
   album      Album       @relation(fields: [albumId], references: [id], onDelete: Cascade)
+  // Which surface this chapter's structure (count/labels/order/placements)
+  // belongs to. WEB (default) is the desktop/canonical mosaic; a chapter
+  // belongs to exactly one viewport, giving each context an independently
+  // authored chapter list (not just independently authored photos within
+  // shared chapter boundaries).
+  viewport   Viewport    @default(WEB)
   label      String // e.g. "2018", "Trip to the Alps"
   order      Int
   placements Placement[]
 
-  @@index([albumId, order])
+  @@index([albumId, viewport, order])
 }
 
-enum PlacementSize {
-  SMALL
-  MEDIUM
-  LARGE
-  FULL
+enum PlacementType {
+  PHOTO
+  TEXT
+}
+
+// Which surface a Chapter (and by extension its Placements) is authored
+// for. WEB (default) is the desktop/canonical mosaic; MOBILE_LANDSCAPE/
+// MOBILE_PORTRAIT are optional, fully independent alternate chapter lists
+// (own chapter count/labels/order/photo selection, not a resized copy of
+// WEB) rendered when the viewer is not on a real desktop. "Does this album
+// have a mobile override" is a derived fact (any chapters with that
+// viewport exist for it).
+enum Viewport {
+  WEB
+  MOBILE_LANDSCAPE
+  MOBILE_PORTRAIT
 }
 
 model Placement {
   id        String        @id @default(cuid())
   chapterId String
   chapter   Chapter       @relation(fields: [chapterId], references: [id], onDelete: Cascade)
-  photoId   String
-  photo     Photo         @relation(fields: [photoId], references: [id])
-  order     Int
-  size      PlacementSize @default(MEDIUM)
-  colSpan   Int?
-  rowSpan   Int?
+  type      PlacementType @default(PHOTO)
+  // PHOTO blocks:
+  photoId             String?
+  photo               Photo?  @relation(fields: [photoId], references: [id])
+  // When true, rowSpan is derived from the photo's real aspect ratio
+  // (src/lib/gallery/aspect-ratio.ts) instead of being chosen freely, and
+  // the image is letterboxed (object-contain) instead of cropped.
+  preserveAspectRatio Boolean @default(false)
+  // TEXT blocks: sanitized rich-text HTML (bold/italic/links only — see
+  // src/lib/sanitize-html.ts), rendered as-is by ChapterMosaic.
+  textContent String?
+  order      Int
+  // How many grid cells this placement spans, set freely by the admin
+  // editor (1-4 columns on the 4-column grid, see src/lib/gallery/grid.ts)
+  // rather than picked from a fixed S/M/L/F preset.
+  colSpan    Int      @default(1)
+  rowSpan    Int      @default(1)
+  gridColumn Int?
+  gridRow    Int?
 
   @@index([chapterId, order])
   @@index([photoId])
@@ -124,7 +165,7 @@ model Photo {
   gpsLng       Float?
 
   // Film / analog (no EXIF — filled in manually by the admin)
-  isAnalog Boolean @default(false)
+  isAnalog  Boolean @default(false)
   filmStock String?
 
   tags       Tag[]

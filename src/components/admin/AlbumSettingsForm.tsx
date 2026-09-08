@@ -8,6 +8,7 @@ import type { Album } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -31,7 +32,28 @@ export function AlbumSettingsForm({ album, photos }: AlbumSettingsFormProps) {
   const [locationName, setLocationName] = useState(album.locationName ?? "");
   const [status, setStatus] = useState(album.status);
   const [coverPhotoId, setCoverPhotoId] = useState(album.coverPhotoId);
+  const [showChapterLabels, setShowChapterLabels] = useState(album.showChapterLabels);
+  const [chapterLayout, setChapterLayout] = useState(album.chapterLayout);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  async function deleteAlbum() {
+    if (
+      !confirm(
+        `Delete "${album.title}"? This removes all its chapters and photo placements — the photos themselves stay in the library. This can't be undone.`,
+      )
+    )
+      return;
+    setDeleting(true);
+    const res = await fetch(`/api/admin/albums/${album.id}`, { method: "DELETE" });
+    setDeleting(false);
+    if (!res.ok) {
+      toast.error("Could not delete album");
+      return;
+    }
+    toast.success("Album deleted");
+    router.push("/admin/albums");
+  }
 
   async function save() {
     setSaving(true);
@@ -44,6 +66,8 @@ export function AlbumSettingsForm({ album, photos }: AlbumSettingsFormProps) {
         locationName: locationName || null,
         status,
         coverPhotoId,
+        showChapterLabels,
+        chapterLayout,
       }),
     });
     setSaving(false);
@@ -102,8 +126,44 @@ export function AlbumSettingsForm({ album, photos }: AlbumSettingsFormProps) {
           onChange={setCoverPhotoId}
         />
       </div>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="album-chapter-layout">Chapter layout</Label>
+        <Select
+          value={chapterLayout}
+          onValueChange={(v) => setChapterLayout(v as typeof chapterLayout)}
+        >
+          <SelectTrigger id="album-chapter-layout" className="w-44">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="PAGED">Separate pages</SelectItem>
+            <SelectItem value="CONTINUOUS">Continuous (no gap)</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="album-show-chapter-labels">Chapter titles</Label>
+        <div className="flex h-9 items-center gap-2">
+          <Switch
+            id="album-show-chapter-labels"
+            checked={showChapterLabels}
+            onCheckedChange={setShowChapterLabels}
+          />
+          <span className="text-muted-foreground text-sm">
+            {showChapterLabels ? "Shown" : "Hidden"}
+          </span>
+        </div>
+      </div>
       <Button type="button" onClick={save} disabled={saving}>
         {saving ? "Saving…" : "Save"}
+      </Button>
+      <Button
+        type="button"
+        variant="destructive"
+        onClick={deleteAlbum}
+        disabled={deleting}
+      >
+        {deleting ? "Deleting…" : "Delete album"}
       </Button>
     </div>
   );

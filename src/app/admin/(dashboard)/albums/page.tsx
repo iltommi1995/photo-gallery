@@ -38,7 +38,7 @@ export default async function AlbumsPage() {
             <div>
               <p className="text-sm font-medium">{album.title}</p>
               <p className="text-muted-foreground text-xs">
-                /places/{album.slug} · {album._count.chapters} chapter
+                /albums/{album.slug} · {album._count.chapters} chapter
                 {album._count.chapters === 1 ? "" : "s"}
               </p>
             </div>

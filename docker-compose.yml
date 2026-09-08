@@ -1,7 +1,10 @@
-# Production stack: app + Postgres + Caddy (automatic HTTPS). See
-# docs/deployment.md for the full first-boot/update/backup walkthrough —
-# in particular, why `db` must be started (and healthy) *before* building
-# `app`.
+# Production stack: app + Postgres. TLS/routing is handled externally by
+# a reverse proxy that already exists in front of this deployment (e.g.
+# Nginx Proxy Manager, proxying a domain to this host's `app:3000`) — see
+# docs/deployment.md for the full first-boot/update/backup walkthrough, in
+# particular why `db` must be started (and healthy) *before* building
+# `app`. If you don't already have a reverse proxy fronting your other
+# self-hosted services, docs/deployment.md also covers that.
 name: photo-gallery
 
 networks:
@@ -11,8 +14,6 @@ networks:
 volumes:
   db-data:
   photo-storage:
-  caddy-data:
-  caddy-config:
 
 services:
   db:
@@ -50,25 +51,14 @@ services:
       STORAGE_DIR: /app/storage
     volumes:
       - photo-storage:/app/storage
+    # Bound directly to the host so an external reverse proxy (running
+    # elsewhere on the LAN, e.g. Nginx Proxy Manager in its own
+    # container) can reach it at <this-host-ip>:3000 — see
+    # docs/deployment.md.
+    ports:
+      - "3000:3000"
     networks:
       - photo-gallery-net
     depends_on:
       db:
         condition: service_healthy
-
-  reverse-proxy:
-    image: caddy:2-alpine
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    environment:
-      SITE_DOMAIN: ${SITE_DOMAIN:?SITE_DOMAIN is required}
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy-data:/data
-      - caddy-config:/config
-    networks:
-      - photo-gallery-net
-    depends_on:
-      - app

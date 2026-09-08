@@ -16,17 +16,27 @@ const SECTIONS = [
  * running database.
  */
 export function HorizontalScrollDemo() {
-  const { containerRef, progress } = useHorizontalScroll();
+  const { containerRef, progressBarRef, progressFillRef } = useHorizontalScroll();
 
   return (
     <div style={{ border: "1px solid #8883", borderRadius: 8, overflow: "hidden" }}>
-      <div style={{ height: 4, background: "#8882" }}>
+      <div
+        ref={progressBarRef}
+        role="progressbar"
+        aria-label="Scroll position"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={0}
+        style={{ height: 4, background: "#8882" }}
+      >
         <div
+          ref={progressFillRef}
           style={{
             height: "100%",
-            width: `${Math.round(progress * 100)}%`,
+            width: "100%",
+            transform: "scaleX(0)",
+            transformOrigin: "left",
             background: "#c0392b",
-            transition: "width 75ms linear",
           }}
         />
       </div>
@@ -38,7 +48,6 @@ export function HorizontalScrollDemo() {
           height: 260,
           overflowX: "auto",
           overflowY: "hidden",
-          scrollSnapType: "x mandatory",
         }}
       >
         {SECTIONS.map((s) => (
@@ -47,7 +56,7 @@ export function HorizontalScrollDemo() {
             data-scroll-section
             style={{
               flex: "0 0 100%",
-              scrollSnapAlign: "start",
+
               display: "flex",
               alignItems: "center",
               justifyContent: "center",

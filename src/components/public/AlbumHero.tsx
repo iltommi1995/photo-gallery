@@ -1,4 +1,14 @@
 import Image from "next/image";
+import { Anton } from "next/font/google";
+
+// Same display face and treatment as the home hero title
+// (src/app/(public)/page.tsx) — loaded here too rather than shared via a
+// design token, matching how the home hero already does it.
+const heroFont = Anton({
+  subsets: ["latin"],
+  weight: "400",
+  display: "swap",
+});
 
 type AlbumHeroProps = {
   title: string;
@@ -9,7 +19,7 @@ export function AlbumHero({ title, coverPhoto }: AlbumHeroProps) {
   return (
     <section
       data-scroll-section
-      className="bg-portfolio-ink relative h-[60vh] w-full shrink-0 md:h-full md:w-screen"
+      className="bg-portfolio-ink relative h-dvh w-full shrink-0 gallery-wide:h-full"
     >
       {coverPhoto && (
         <Image
@@ -24,8 +34,12 @@ export function AlbumHero({ title, coverPhoto }: AlbumHeroProps) {
         />
       )}
       <div className="from-portfolio-overlay absolute inset-0 bg-gradient-to-t to-transparent" />
-      <h1 className="font-portfolio-heading text-portfolio-paper absolute bottom-10 left-6 text-4xl font-bold tracking-tight uppercase sm:text-6xl">
-        {title}
+      <h1
+        className={`${heroFont.className} text-portfolio-accent absolute right-6 bottom-10 text-right font-normal uppercase sm:right-16 sm:bottom-16 gallery-short:bottom-4`}
+      >
+        <span className="block text-[clamp(1.75rem,5vw,7rem)] leading-none tracking-[-0.03em] [overflow-wrap:anywhere] gallery-short:text-[clamp(1.5rem,10vh,3.5rem)]">
+          {title}
+        </span>
       </h1>
     </section>
   );

@@ -38,6 +38,7 @@ test("create an album, add a chapter, upload a photo, and place it on the canvas
 }) => {
   test.slow(); // real upload + image processing + drag interaction
 
+  await page.setViewportSize({ width: 1440, height: 1200 });
   await loginAsAdmin(page);
 
   // --- Upload a photo -----------------------------------------------------
@@ -45,6 +46,17 @@ test("create an album, add a chapter, upload a photo, and place it on the canvas
   await page.goto("/admin/photos");
   await page.locator('input[type="file"]').setInputFiles(filePath);
   await expect(page.getByText("Done")).toBeVisible({ timeout: 15_000 });
+
+  const uploaded = (
+    await (await page.request.get("/api/admin/photos")).json()
+  ).photos.find((photo: { filename: string }) => photo.filename === filename);
+  expect(
+    (
+      await page.request.patch(`/api/admin/photos/${uploaded.id}`, {
+        data: { altText: "Grid editor test photo" },
+      })
+    ).ok(),
+  ).toBe(true);
 
   // --- Create an album ------------------------------------------------
   const albumTitle = `E2E Album ${Date.now()}`;
@@ -62,15 +74,14 @@ test("create an album, add a chapter, upload a photo, and place it on the canvas
   const libraryItem = page.locator(`button[title="${filename}"]`);
   await expect(libraryItem).toBeVisible();
 
-  const dropzone = page.getByTestId("chapter-canvas-dropzone");
   const [sourceBox, targetBox] = await Promise.all([
     libraryItem.boundingBox(),
-    dropzone.boundingBox(),
+    page.locator('[data-grid-cell="3:2"]').boundingBox(),
   ]);
   if (!sourceBox || !targetBox) throw new Error("Could not measure drag source/target");
   await dragBoundingBoxTo(page, sourceBox, targetBox);
 
-  await expect(page.getByLabel("Set size MEDIUM")).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByLabel("Increase width")).toBeVisible({ timeout: 10_000 });
   // Exact match: getByText("Saved") would also match "Unsaved changes"
   // (case-insensitive substring), producing a false-positive pass before
   // the debounced save has actually fired.
@@ -80,7 +91,24 @@ test("create an album, add a chapter, upload a photo, and place it on the canvas
   await page.reload();
   await expect(page.getByLabel("Remove from chapter")).toBeVisible();
 
+  const placed = page.locator("[data-placement-id]");
+  await expect(placed).toHaveAttribute("data-grid-column", "3");
+  await expect(placed).toHaveAttribute("data-grid-row", "2");
+  const source = await placed.boundingBox();
+  const destination = await page.locator('[data-grid-cell="1:4"]').boundingBox();
+  if (!source || !destination) throw new Error("Missing grid coordinates");
+  await dragBoundingBoxTo(page, source, destination);
+  await expect(placed).toHaveAttribute("data-grid-column", "1");
+  await expect(placed).toHaveAttribute("data-grid-row", "4");
+  await expect(page.getByText("Saved", { exact: true })).toBeVisible();
+  await page.reload();
+  await expect(page.locator("[data-placement-id]")).toHaveAttribute("data-grid-row", "4");
+
   // --- Live preview renders the same placement via ChapterMosaic -------
   await page.getByRole("tab", { name: "Live preview" }).click();
   await expect(page.locator("figure img")).toHaveCount(1);
+  await expect(page.locator("figure")).toHaveAttribute("data-grid-row", "4");
+  expect(
+    await page.locator("figure").evaluate((el) => getComputedStyle(el).gridRowStart),
+  ).toBe("4");
 });

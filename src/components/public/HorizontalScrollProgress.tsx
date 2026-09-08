@@ -1,12 +1,21 @@
+import type { Ref } from "react";
+
 type HorizontalScrollProgressProps = {
-  progress: number;
+  progress?: number;
+  progressBarRef?: Ref<HTMLDivElement>;
+  progressFillRef?: Ref<HTMLDivElement>;
 };
 
-export function HorizontalScrollProgress({ progress }: HorizontalScrollProgressProps) {
+export function HorizontalScrollProgress({
+  progress = 0,
+  progressBarRef,
+  progressFillRef,
+}: HorizontalScrollProgressProps) {
   const pct = Math.min(1, Math.max(0, progress)) * 100;
   return (
     <div
-      className="bg-portfolio-ink/10 fixed inset-x-0 top-0 z-40 hidden h-1 md:block"
+      className="bg-portfolio-ink/10 fixed inset-x-0 top-0 z-40 hidden h-1 gallery-wide:block"
+      ref={progressBarRef}
       role="progressbar"
       aria-label="Album scroll position"
       aria-valuenow={Math.round(pct)}
@@ -14,8 +23,9 @@ export function HorizontalScrollProgress({ progress }: HorizontalScrollProgressP
       aria-valuemax={100}
     >
       <div
-        className="bg-portfolio-accent h-full transition-[width] duration-75 ease-linear"
-        style={{ width: `${pct}%` }}
+        ref={progressFillRef}
+        className="bg-portfolio-accent h-full w-full origin-left"
+        style={{ transform: `scaleX(${pct / 100})` }}
       />
     </div>
   );

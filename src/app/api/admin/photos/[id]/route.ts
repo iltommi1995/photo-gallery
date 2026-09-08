@@ -1,6 +1,8 @@
+import { revalidatePublicGalleries } from "@/lib/revalidate-public";
 import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/db";
+import { deletePhoto } from "@/lib/photo-deletion";
 import { photoMetadataSchema } from "@/lib/schemas/photo";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -9,6 +11,7 @@ export async function GET(_request: Request, { params }: RouteContext) {
   const { id } = await params;
   const photo = await prisma.photo.findUnique({ where: { id }, include: { tags: true } });
   if (!photo) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  revalidatePublicGalleries();
   return NextResponse.json({ photo });
 }
 
@@ -34,5 +37,18 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     include: { tags: true },
   });
 
+  revalidatePublicGalleries();
   return NextResponse.json({ photo });
+}
+
+export async function DELETE(_request: Request, { params }: RouteContext) {
+  const { id } = await params;
+  const existing = await prisma.photo.findUnique({ where: { id } });
+  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  const result = await deletePhoto(id);
+  if (!result.ok) return NextResponse.json({ error: result.error }, { status: 409 });
+
+  revalidatePublicGalleries();
+  return NextResponse.json({ ok: true });
 }

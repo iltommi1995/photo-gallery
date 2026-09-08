@@ -14,14 +14,16 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const chapters = await prisma.chapter.findMany({ where: { albumId } });
+  const chapters = await prisma.chapter.findMany({
+    where: { albumId, viewport: parsed.data.viewport },
+  });
   const validIds = new Set(chapters.map((c) => c.id));
   if (
     parsed.data.chapterIds.length !== chapters.length ||
     !parsed.data.chapterIds.every((id) => validIds.has(id))
   ) {
     return NextResponse.json(
-      { error: "chapterIds must be exactly this album's chapter ids" },
+      { error: "chapterIds must be exactly this album's chapter ids for that viewport" },
       { status: 400 },
     );
   }
