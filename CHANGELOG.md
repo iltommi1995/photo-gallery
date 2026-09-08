@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Admin login supports two-factor authentication via an authenticator app
+  (TOTP, RFC 6238), from the settings page: scan a QR code, confirm a code,
+  get 8 one-time bcrypt-hashed backup codes shown once (for recovery if the
+  device is lost — there's no email-based password reset). Sign-in becomes
+  a two-step form when 2FA is enabled: the existing `Credentials` provider's
+  `authorize()` throws a typed `RequiresTwoFactorError` after a correct
+  password when no code was submitted yet, which Auth.js surfaces to the
+  client via `signIn(...).code` — no extra pre-login endpoint needed. A
+  submitted TOTP code's time-step is remembered (`totpLastUsedStep`) to
+  reject replaying the same code within its ~90s acceptance window; a
+  backup code is removed from storage once used. The shared login rate
+  limit (`src/lib/rate-limit.ts`) moved from 5 to 8 attempts/60s, since a
+  2FA login now makes two `authorize()` calls against it. `Admin` model
+  gains `totpSecret`, `totpEnabled`, `totpLastUsedStep`, `backupCodes`
+  (migration `20260908081633_add_admin_totp_fields`, purely additive).
+
 ## [1.0.0] - 2026-09-08
 
 ### Added
