@@ -58,6 +58,13 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD is required}
       ADMIN_NAME: ${ADMIN_NAME:-Admin}
       NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:?NEXT_PUBLIC_SITE_URL is required}
+      # Auth.js's own recommended fix for self-hosted deployments behind a
+      # reverse proxy: an explicit canonical URL is more robust than relying
+      # on trustHost's forwarded-header detection alone, which depends on
+      # exactly how the proxy forwards Host/X-Forwarded-* — discovered live
+      # when sign-out redirected to https://localhost:3000 in production.
+      # Reuses NEXT_PUBLIC_SITE_URL rather than a second env var to set.
+      AUTH_URL: ${NEXT_PUBLIC_SITE_URL:?NEXT_PUBLIC_SITE_URL is required}
       STORAGE_DIR: /app/storage
     volumes:
       - photo-storage:/app/storage
