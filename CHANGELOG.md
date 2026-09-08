@@ -27,6 +27,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Deleting or editing an album never actually refreshed the public
+  `/albums` (or `/places`) page — `revalidatePublicGalleries()` called
+  `revalidatePath("/places", "layout")` / `revalidatePath("/albums",
+  "layout")`, but the `"layout"` type argument is only meaningful when it
+  matches an actual `layout.tsx` at that exact segment; neither route has
+  one (only a `page.tsx`), so both calls were silent no-ops — confirmed
+  against Next.js's own docs ("If path is a literal path... omit type")
+  and reproduced live: a deleted album kept appearing on `/albums`
+  indefinitely (`x-nextjs-cache: HIT`, unaffected by any further edits)
+  until the next full rebuild happened to re-query the database fresh.
+  Both calls now omit `type`, matching every other call in this file.
+
 - `deploy.yml`'s `.env is missing` check kept failing on the runner even
   after copying `.env` into its checkout path — `actions/checkout`'s
   default `git clean -ffdx` wipes untracked files, including that
