@@ -32,7 +32,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   trust an incoming `Host` header unless `trustHost: true` is set
   explicitly outside of Vercel, which auto-detects and trusts its own.
   Added to `NextAuth({...})` in `src/lib/auth.ts`; safe here since NPM is
-  the only thing that can reach the app's port.
+  the only thing that can reach the app's port. Fixing that surfaced a
+  second, related issue: sign-out redirected to `https://localhost:3000`
+  in production instead of the real domain — `trustHost`'s forwarded-header
+  detection depends on exactly how the reverse proxy forwards
+  `Host`/`X-Forwarded-*`, which turned out not to be reliable enough here.
+  `docker-compose.yml`'s `app` service now also sets `AUTH_URL` (Auth.js's
+  own recommended fix for self-hosted deployments behind a proxy — an
+  explicit canonical URL instead of header-based detection), reusing
+  `NEXT_PUBLIC_SITE_URL` rather than a second value to configure.
 
 - `pnpm typecheck` failed on any genuinely fresh checkout (`tsc --noEmit`
   alone) with `Cannot find name 'LayoutProps'` — those ambient route types
