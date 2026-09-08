@@ -17,6 +17,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   on first boot. Generating only reads the schema file, no live `db`
   connection needed, so it's safe to do at build time here.
 
+- `docker-compose.yml`'s `app.build.network: photo-gallery-net` — recent
+  Compose versions build through BuildKit (`docker buildx bake`), which
+  only accepts `default`/`none`/`host` there and rejects a named bridge
+  network outright, discovered live during a real deployment. Removed;
+  `docs/deployment.md` gained a one-time host setup step (a buildx builder
+  created with `--driver-opt network=photo-gallery-net`) that gives the
+  build the same DB access a different way — needed once per OS user that
+  runs builds, including the self-hosted CI runner's own user.
+
 ## [1.0.0] - 2026-09-08
 
 ### Added

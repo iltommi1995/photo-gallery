@@ -42,7 +42,7 @@ cd /opt/photo-gallery
 
 (If the repo doesn't exist on GitHub yet: create it there first, push this
 local repo's `main` branch to it, then clone as above. The self-hosted
-runner in step 6 also needs this to already exist.)
+runner in step 8 also needs this to already exist.)
 
 ## 3. Create `.env`
 
@@ -60,7 +60,7 @@ _before_ the first build, not just at runtime).
 
 This file is gitignored on purpose and never touched by CI — it's the one
 thing that has to exist on the host independent of any checkout, both for
-this manual first-boot walkthrough and for the automated deploy in step 6.
+this manual first-boot walkthrough and for the automated deploy in step 8.
 
 ## 4. Why the build order matters
 
@@ -76,16 +76,43 @@ chicken-and-egg.
 The Dockerfile's `migrator` stage breaks the cycle: it's a separate,
 lightweight build target (just Prisma + the schema, no app source, so it
 never needs `db` at build time) that only runs migrations _against_ `db` at
-container-run time. `docker-compose.yml`'s `app.build.network` key joins
-the `app` build itself to `db`'s network so `next build` can reach
-`db:5432` once the migrator has already applied the schema. This is also
-why `app`'s runtime commands use the `next`/`prisma`/`tsx` binaries
-directly (`node_modules/.bin/...`) instead of `pnpm start`/`pnpm prisma` —
-pnpm wraps script execution in a workspace-consistency check that tries to
-write a temp file into `/app`, which the container's non-root user can't
-do (verified directly — this is not a hypothetical concern).
+container-run time. The `app` build itself still needs to reach `db:5432`
+once the migrator has already applied the schema — see step 5 below for
+how that's wired up (it's _not_ a plain compose `network:` key, which
+BuildKit rejects). This is also why `app`'s runtime commands use the
+`next`/`prisma`/`tsx` binaries directly (`node_modules/.bin/...`) instead
+of `pnpm start`/`pnpm prisma` — pnpm wraps script execution in a
+workspace-consistency check that tries to write a temp file into `/app`,
+which the container's non-root user can't do (verified directly — this is
+not a hypothetical concern).
 
-## 5. First boot
+## 5. One-time buildx builder setup
+
+`docker compose build` goes through BuildKit (via `docker buildx bake` on
+recent Compose versions), which only accepts `default`/`none`/`host` for a
+service's `build.network` — a named bridge network like the
+`photo-gallery-net` this stack creates is rejected outright
+(`network mode "photo-gallery-net" not supported by buildkit`), discovered
+live during a real deployment. The fix isn't in `docker-compose.yml` (that
+field can't express this) — it's a builder instance itself attached to the
+network, created once per host (and per OS user that runs builds — buildx
+builders are stored under that user's `~/.docker/buildx`, so the
+self-hosted CI runner user in step 8 needs this done for its own account
+too, separately from whichever user does it here):
+
+```bash
+docker buildx create --name photo-gallery-builder \
+  --driver docker-container --driver-opt network=photo-gallery-net --use
+docker buildx inspect --bootstrap
+```
+
+`--use` makes it the default builder for future `docker build`/
+`docker compose build` invocations by that user — nothing else needs to
+reference it by name. This only needs to be done once; it survives
+reboots (recreate it if the container is ever destroyed and rebuilt from
+scratch, though — it isn't itself backed up).
+
+## 6. First boot
 
 1. **Start Postgres first, and wait for it to be healthy:**
 
@@ -136,7 +163,7 @@ do (verified directly — this is not a hypothetical concern).
    should return `200`. If it doesn't, `docker compose logs app` first —
    don't move on to NPM until this works.
 
-## 6. Point Nginx Proxy Manager at it
+## 7. Point Nginx Proxy Manager at it
 
 In NPM's own UI (**Hosts → Proxy Hosts → Add Proxy Host**), same pattern as
 every other service already listed there:
@@ -154,7 +181,7 @@ is otherwise reachable for the ACME HTTP-01 challenge), save — NPM
 requests the certificate and starts proxying. `https://photo.sdvproductions.org/places`
 and `https://photo.sdvproductions.org/admin/login` should both load.
 
-## 7. CI/CD — deploy automatically on push to `main`
+## 8. CI/CD — deploy automatically on push to `main`
 
 `.github/workflows/deploy.yml` does this in two stages: a `verify` job on a
 regular GitHub-hosted runner (typecheck, lint, test — fast, no homelab
@@ -201,6 +228,13 @@ inbound from the internet to this container:
    way, the workflow's very first real step fails loudly
    (`.env is missing`) if this isn't in place, rather than silently
    deploying with missing secrets.
+5. `svc.sh install` runs the runner as whichever non-root user invoked
+   `config.sh` above — that user needs its own network-attached buildx
+   builder (see step 5 near the top of this doc), separately from whichever
+   user (e.g. `root`) set one up for the manual first boot. Run the same
+   two commands as that user before the first automated deploy, or its
+   `docker compose build app` step fails with the same
+   `network mode ... not supported by buildkit` error covered there.
 
 From here on, every push to `main` (or a manual run from the Actions tab)
 rebuilds and redeploys automatically — the deploy job runs the exact same
