@@ -15,7 +15,10 @@ type LoginFormProps = {
   callbackUrl: string;
 };
 
+type Step = "credentials" | "code";
+
 export function LoginForm({ callbackUrl }: LoginFormProps) {
+  const [step, setStep] = useState<Step>("credentials");
   const [submitting, setSubmitting] = useState(false);
   const {
     register,
@@ -26,15 +29,19 @@ export function LoginForm({ callbackUrl }: LoginFormProps) {
   });
 
   async function onSubmit(values: LoginInput) {
+    if (step === "code" && !values.code) return;
+
     setSubmitting(true);
-    const result = await signIn("credentials", {
-      ...values,
-      redirect: false,
-    });
+    const result = await signIn("credentials", { ...values, redirect: false });
     setSubmitting(false);
 
+    if (result?.code === "requires-2fa") {
+      setStep("code");
+      return;
+    }
+
     if (!result || result.error) {
-      toast.error("Invalid email or password.");
+      toast.error(step === "code" ? "Invalid code" : "Invalid email or password.");
       return;
     }
 
@@ -43,27 +50,50 @@ export function LoginForm({ callbackUrl }: LoginFormProps) {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex w-full flex-col gap-4">
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="email">Email</Label>
-        <Input id="email" type="email" autoComplete="username" {...register("email")} />
-        {errors.email && (
-          <p className="text-destructive text-sm">{errors.email.message}</p>
-        )}
-      </div>
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="password">Password</Label>
-        <Input
-          id="password"
-          type="password"
-          autoComplete="current-password"
-          {...register("password")}
-        />
-        {errors.password && (
-          <p className="text-destructive text-sm">{errors.password.message}</p>
-        )}
-      </div>
+      {step === "credentials" ? (
+        <>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              autoComplete="username"
+              {...register("email")}
+            />
+            {errors.email && (
+              <p className="text-destructive text-sm">{errors.email.message}</p>
+            )}
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="password">Password</Label>
+            <Input
+              id="password"
+              type="password"
+              autoComplete="current-password"
+              {...register("password")}
+            />
+            {errors.password && (
+              <p className="text-destructive text-sm">{errors.password.message}</p>
+            )}
+          </div>
+        </>
+      ) : (
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="code">Authenticator code</Label>
+          <Input
+            id="code"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            autoFocus
+            {...register("code")}
+          />
+          <p className="text-muted-foreground text-xs">
+            Enter the 6-digit code from your authenticator app, or a backup code.
+          </p>
+        </div>
+      )}
       <Button type="submit" disabled={submitting} className="mt-2">
-        {submitting ? "Signing in…" : "Sign in"}
+        {submitting ? "Signing in…" : step === "code" ? "Verify" : "Sign in"}
       </Button>
     </form>
   );

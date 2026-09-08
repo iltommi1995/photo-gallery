@@ -28,12 +28,28 @@ model SiteSettings {
 }
 
 model Admin {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  passwordHash String
-  name         String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id               String   @id @default(cuid())
+  email            String   @unique
+  passwordHash     String
+  name             String?
+  // TOTP two-factor auth (RFC 6238). totpSecret is only ever set once the
+  // admin has scanned the QR code and confirmed a valid code — it's never
+  // persisted mid-setup, so nullable-with-no-default is correct here, not
+  // an empty-string default.
+  totpSecret       String?
+  // Whether 2FA is actually active. Defaults false so the existing
+  // pre-2FA seeded Admin row is unaffected.
+  totpEnabled      Boolean  @default(false)
+  // The RFC 6238 time-step of the last accepted TOTP code, used to reject
+  // replaying an already-used code within its ~90s acceptance window.
+  // Meaningless (and unset) until the first successful TOTP login.
+  totpLastUsedStep Int?
+  // Bcrypt-hashed one-time recovery codes (Postgres native array). A used
+  // code is removed via a normal array update — single-admin app, no
+  // per-code audit trail needed.
+  backupCodes      String[] @default([])
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
 
 enum AlbumStatus {
@@ -106,28 +122,28 @@ enum Viewport {
 }
 
 model Placement {
-  id        String        @id @default(cuid())
-  chapterId String
-  chapter   Chapter       @relation(fields: [chapterId], references: [id], onDelete: Cascade)
-  type      PlacementType @default(PHOTO)
+  id                  String        @id @default(cuid())
+  chapterId           String
+  chapter             Chapter       @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  type                PlacementType @default(PHOTO)
   // PHOTO blocks:
   photoId             String?
-  photo               Photo?  @relation(fields: [photoId], references: [id])
+  photo               Photo?        @relation(fields: [photoId], references: [id])
   // When true, rowSpan is derived from the photo's real aspect ratio
   // (src/lib/gallery/aspect-ratio.ts) instead of being chosen freely, and
   // the image is letterboxed (object-contain) instead of cropped.
-  preserveAspectRatio Boolean @default(false)
+  preserveAspectRatio Boolean       @default(false)
   // TEXT blocks: sanitized rich-text HTML (bold/italic/links only — see
   // src/lib/sanitize-html.ts), rendered as-is by ChapterMosaic.
-  textContent String?
-  order      Int
+  textContent         String?
+  order               Int
   // How many grid cells this placement spans, set freely by the admin
   // editor (1-4 columns on the 4-column grid, see src/lib/gallery/grid.ts)
   // rather than picked from a fixed S/M/L/F preset.
-  colSpan    Int      @default(1)
-  rowSpan    Int      @default(1)
-  gridColumn Int?
-  gridRow    Int?
+  colSpan             Int           @default(1)
+  rowSpan             Int           @default(1)
+  gridColumn          Int?
+  gridRow             Int?
 
   @@index([chapterId, order])
   @@index([photoId])

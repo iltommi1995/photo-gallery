@@ -2,10 +2,14 @@ import { headers } from "next/headers";
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 
+import { RequiresTwoFactorError } from "@/lib/auth/errors";
 import { verifyCredentials } from "@/lib/auth/verify-credentials";
 import { checkRateLimit } from "@/lib/rate-limit";
 
-const LOGIN_RATE_LIMIT = { max: 5, windowMs: 60_000 };
+// A 2FA-enabled login makes two authorize() calls sharing this bucket
+// (discover-2FA, then verify-code) — higher than a single-factor login's
+// natural budget so one mistyped code doesn't eat most of it.
+const LOGIN_RATE_LIMIT = { max: 8, windowMs: 60_000 };
 
 // CSRF on the /api/admin/** mutation routes: Auth.js's session cookie
 // defaults to SameSite=Lax (HttpOnly), which browsers withhold from
@@ -21,6 +25,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
+        code: { label: "Code", type: "text" },
       },
       async authorize(rawCredentials) {
         const requestHeaders = await headers();
@@ -29,7 +34,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const { allowed } = checkRateLimit(`login:${ip}`, LOGIN_RATE_LIMIT);
         if (!allowed) return null;
 
-        return verifyCredentials(rawCredentials);
+        const result = await verifyCredentials(rawCredentials);
+        if (result.status === "requires-2fa") throw new RequiresTwoFactorError();
+        if (result.status !== "ok") return null;
+        return result.admin;
       },
     }),
   ],
