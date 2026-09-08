@@ -128,6 +128,13 @@ in `@theme inline` in `globals.css` and consumed as ordinary utilities
   enforced by commitlint. Any commit touching `src/`, `prisma/`, or `docs/`
   must also update `CHANGELOG.md` under `Unreleased` in the same commit
   (enforced by a Husky `commit-msg` hook) — see `docs/ai/release-and-changelog.md`.
+- `main` is protected in practice: develop on `dev` or a feature branch and
+  open the PR into `main` manually on GitHub — don't push straight to
+  `main`. A push to `main` (i.e. a merged PR) is what
+  `.github/workflows/deploy.yml` rebuilds and redeploys, so it should only
+  ever land there already reviewed. The same workflow's `verify` job
+  (typecheck/lint/test) also runs on pull requests targeting `main`, so
+  checks show up on the PR itself before merge.
 
 ## AI workflow playbooks (`docs/ai/`)
 
