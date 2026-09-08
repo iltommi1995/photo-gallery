@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -80,14 +80,17 @@ describe("Lightbox", () => {
     expect(onNavigate).toHaveBeenCalledWith(1);
   });
 
-  it("navigates with the right arrow key", async () => {
-    const user = userEvent.setup();
+  it("navigates with the right arrow key", () => {
     const onNavigate = vi.fn();
     render(
       <Lightbox photos={PHOTOS} index={0} onClose={vi.fn()} onNavigate={onNavigate} />,
     );
 
-    await user.keyboard("{ArrowRight}");
+    // The listener is window-level by design (arrow keys work regardless of
+    // what's focused) — dispatch directly on window rather than via
+    // userEvent.keyboard, which targets document.activeElement and can be
+    // left in an unpredictable state by whatever the previous test focused.
+    fireEvent.keyDown(window, { key: "ArrowRight" });
 
     expect(onNavigate).toHaveBeenCalledWith(1);
   });
