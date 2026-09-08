@@ -11,6 +11,8 @@ name: Deploy
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -30,6 +32,9 @@ jobs:
 
   deploy:
     needs: verify
+    # Only an actual push to main deploys — a pull_request run (checks
+    # shown on the PR before merge) stops after verify.
+    if: github.event_name != 'pull_request'
     runs-on: [self-hosted, photo-gallery]
     # A previous run's next build can still be starting up when a second
     # push lands seconds later — let one deploy finish before the next
