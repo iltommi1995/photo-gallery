@@ -221,8 +221,15 @@ inbound from the internet to this container:
    curl -o actions-runner-linux-x64.tar.gz -L \
      https://github.com/actions/runner/releases/latest/download/actions-runner-linux-x64-2.XXX.X.tar.gz
    tar xzf actions-runner-linux-x64.tar.gz
-   ./config.sh --url https://github.com/<you>/<repo> --token <TOKEN> --labels photo-gallery
+   ./config.sh --url https://github.com/<you>/<repo> --token <TOKEN>
    ```
+
+   No `--labels` needed — `deploy.yml` targets plain `runs-on: self-hosted`
+   (an earlier attempt to scope it to a custom `photo-gallery` label
+   failed silently: the flag didn't stick, and every deploy sat forever
+   waiting for a runner that was never considered a match). One
+   self-hosted runner per repo is enough for `self-hosted` alone to be
+   unambiguous.
 
    (Use the exact download URL and token GitHub's UI shows you — they're
    per-repo and the token is single-use/short-lived.)
