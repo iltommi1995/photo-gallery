@@ -35,7 +35,13 @@ jobs:
     # Only an actual push to main deploys — a pull_request run (checks
     # shown on the PR before merge) stops after verify.
     if: github.event_name != 'pull_request'
-    runs-on: [self-hosted, photo-gallery]
+    # Just `self-hosted`, not `[self-hosted, photo-gallery]` — the runner
+    # registered for this repo never actually got the "photo-gallery"
+    # custom label applied (its --labels flag didn't stick), discovered
+    # live when every deploy sat "Waiting for a runner to pick up this
+    # job..." forever. There's only one self-hosted runner on this repo,
+    # so requiring a custom label added nothing anyway.
+    runs-on: self-hosted
     # A previous run's next build can still be starting up when a second
     # push lands seconds later — let one deploy finish before the next
     # starts, rather than two `docker compose build app`s racing on the

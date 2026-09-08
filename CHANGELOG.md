@@ -27,6 +27,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `deploy.yml`'s `deploy` job never ran — `runs-on: [self-hosted,
+  photo-gallery]` required a custom "photo-gallery" label that the
+  self-hosted runner never actually got (its `--labels` flag at
+  registration didn't stick), so every push to `main` sat forever at
+  "Waiting for a runner to pick up this job...", discovered live once the
+  runner was actually registered. Simplified to plain `runs-on:
+  self-hosted` — there's only one self-hosted runner on this repo, so a
+  custom label added nothing. `docs/deployment.md`'s runner setup step no
+  longer passes `--labels` either.
+
 - Admin login 500'd with a generic "Configuration" error on the live
   production domain (behind Nginx Proxy Manager) — Auth.js refuses to
   trust an incoming `Host` header unless `trustHost: true` is set
