@@ -33,6 +33,12 @@ COPY prisma ./prisma
 # pnpm workspace-consistency check first that wants the full source tree
 # and (for native deps like sharp) interactive build-script approval,
 # neither of which apply to this deliberately source-free image.
+# `migrate deploy` itself doesn't need a generated client, but
+# `prisma/seed.ts` does (`import { PrismaClient } from "@prisma/client"`) —
+# this image is also used to run the seed script (see docs/deployment.md),
+# and generating only needs the schema file, not a live `db` connection, so
+# it's safe to do at build time here.
+RUN node_modules/.bin/prisma generate
 CMD ["node_modules/.bin/prisma", "migrate", "deploy"]
 
 FROM base AS builder

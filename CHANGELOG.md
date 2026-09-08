@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `Dockerfile`'s `migrator` stage now runs `prisma generate` at build time.
+  `prisma migrate deploy` doesn't need a generated client, but
+  `prisma/seed.ts` does (`import { PrismaClient } from "@prisma/client"`)
+  — the same image is used to run the seed script per `docs/deployment.md`,
+  and without this it fails with "`@prisma/client` did not initialize yet"
+  on first boot. Generating only reads the schema file, no live `db`
+  connection needed, so it's safe to do at build time here.
+
 ## [1.0.0] - 2026-09-08
 
 ### Added
