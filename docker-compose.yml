@@ -36,14 +36,17 @@ services:
   app:
     build:
       context: .
-      # NOT `network: photo-gallery-net` here — BuildKit's compose/bake
-      # config only accepts `default`/`none`/`host` for this field (a named
-      # bridge network is rejected outright, discovered live during
-      # deployment). The build still needs to reach `db` (see the Dockerfile
-      # builder-stage comment), which instead requires the active buildx
-      # builder itself to be attached to `photo-gallery-net` — a one-time
-      # `docker buildx create --driver docker-container --driver-opt
-      # network=photo-gallery-net --use`, documented in docs/deployment.md.
+      # NOT `network: photo-gallery-net` — BuildKit's compose/bake config
+      # only accepts `default`/`none`/`host` for this field (a named bridge
+      # network is rejected outright, discovered live during deployment).
+      # `host` here does NOT mean the real Docker host's network — it means
+      # "whatever network the active buildx builder's own container is on",
+      # which is `photo-gallery-net` for the network-attached builder this
+      # stack requires (`docker buildx create --driver docker-container
+      # --driver-opt network=photo-gallery-net --use`, one-time, documented
+      # in docs/deployment.md) — that's what actually lets the build reach
+      # `db` (see the Dockerfile builder-stage comment for why it needs to).
+      network: host
       args:
         DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
         NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:?NEXT_PUBLIC_SITE_URL is required}

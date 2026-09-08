@@ -20,8 +20,11 @@ they work well; the specifics below are just concrete defaults:
 - **Unprivileged**: yes, with **nesting enabled** (Proxmox → container →
   Options → Features → check "Nesting") — Docker needs this to run inside
   an unprivileged LXC.
-- **Resources**: 2 CPU cores, 2–4 GB RAM, 16+ GB disk is comfortable for a
-  personal photo site (Postgres + the app + generated image variants).
+- **Resources**: 2 CPU cores, **4 GB RAM** (2 GB is not enough — a real
+  deploy hit swap exhaustion and effectively hung during `next build`'s
+  Turbopack compile with only 2 GB RAM / 512 MB swap; bumping to 4 GB RAM
+  / 2 GB swap resolved it), 16+ GB disk. Comfortable for a personal photo
+  site (Postgres + the app + generated image variants) once sized this way.
 - **Network**: same bridge/VLAN as your other service containers, static
   IP or a DHCP reservation (NPM will point at this IP by hostname/IP, so
   it shouldn't move).
@@ -93,12 +96,18 @@ recent Compose versions), which only accepts `default`/`none`/`host` for a
 service's `build.network` — a named bridge network like the
 `photo-gallery-net` this stack creates is rejected outright
 (`network mode "photo-gallery-net" not supported by buildkit`), discovered
-live during a real deployment. The fix isn't in `docker-compose.yml` (that
-field can't express this) — it's a builder instance itself attached to the
-network, created once per host (and per OS user that runs builds — buildx
-builders are stored under that user's `~/.docker/buildx`, so the
-self-hosted CI runner user in step 8 needs this done for its own account
-too, separately from whichever user does it here):
+live during a real deployment. `docker-compose.yml` sets `network: host`
+for `app`'s build, but that alone isn't enough — for a plain default
+builder, `host` means the actual machine's network, which doesn't help
+`db` resolve. It only becomes useful once paired with a **network-attached
+buildx builder**: for a `docker-container`-driver builder created with
+`--driver-opt network=photo-gallery-net`, BuildKit's `host` network mode
+means "the builder's own container's network" — which, for this specific
+builder, _is_ `photo-gallery-net`. Create it once per host (and per OS
+user that runs builds — buildx builders are stored under that user's
+`~/.docker/buildx`, so the self-hosted CI runner user in step 8 needs this
+done for its own account too, separately from whichever user does it
+here):
 
 ```bash
 docker buildx create --name photo-gallery-builder \
@@ -108,9 +117,17 @@ docker buildx inspect --bootstrap
 
 `--use` makes it the default builder for future `docker build`/
 `docker compose build` invocations by that user — nothing else needs to
-reference it by name. This only needs to be done once; it survives
-reboots (recreate it if the container is ever destroyed and rebuilt from
-scratch, though — it isn't itself backed up).
+reference it by name (or pass `BUILDX_BUILDER=photo-gallery-builder`
+explicitly if `--use` didn't stick, which some Compose/bake versions seem
+to need). This only needs to be done once — it survives reboots of the
+container itself, but **not** if the container running Docker gets
+rebooted (e.g. after resizing its RAM, see step 6): the builder's own
+backing container doesn't restart automatically, and re-running the two
+commands above (harmless if it already exists — `docker buildx rm
+photo-gallery-builder` first if `create` complains) fixes a
+`Can't reach database server at db:5432` failure during `RUN pnpm build`
+that otherwise looks identical to the network-not-supported error from a
+missing builder, but isn't the same problem.
 
 ## 6. First boot
 
