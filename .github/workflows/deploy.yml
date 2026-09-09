@@ -89,9 +89,34 @@ jobs:
           docker run --rm --network photo-gallery-net --env-file .env \
             photo-gallery-migrator
 
+      # `docker compose build app` — not used here — silently drops the
+      # `network: host` build option's actual effect: BuildKit gates
+      # host-network access for RUN steps behind a separate per-build
+      # "network.host" entitlement, and going through `docker compose
+      # build` (→ `docker buildx bake` under the hood) doesn't request
+      # it, even with `network: host` set in docker-compose.yml — the
+      # build just silently falls back to an isolated network with no
+      # route to `db`, discovered live (`Can't reach database server at
+      # db:5432` from inside `RUN pnpm build`, despite `db` being up,
+      # healthy, and reachable via a plain `docker run --network
+      # photo-gallery-net`, and the buildx builder itself correctly
+      # attached to that network — none of that matters if the
+      # entitlement was never granted for this specific build).
+      # `docker buildx build --allow network.host` grants it explicitly,
+      # confirmed live to actually reach `db`. `--load` (not `--push`)
+      # puts the result straight into the local Docker daemon, tagged to
+      # match what `docker compose up -d app` expects, which then starts
+      # it without rebuilding.
       - name: Build and deploy app
         run: |
-          docker compose build app
+          set -a
+          source .env
+          set +a
+          docker buildx build \
+            --network host --allow network.host \
+            --build-arg DATABASE_URL="${DATABASE_URL}" \
+            --build-arg NEXT_PUBLIC_SITE_URL="${NEXT_PUBLIC_SITE_URL}" \
+            --load -t photo-gallery-app:latest .
           docker compose up -d app
 
       - name: Wait for the app to respond
