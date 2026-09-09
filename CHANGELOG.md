@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Admin photo metadata: the Location field is now a type-ahead search
+  (`LocationAutocomplete`, built on base-ui's `Combobox`) against
+  OpenStreetMap's Nominatim geocoder (proxied through
+  `/api/admin/geocode` to attach the required `User-Agent` and apply
+  rate limiting), so picking "Montenegro" from a list of real places
+  replaces free-typing it — no more typos silently creating duplicate
+  places on `/places`. Picking a result also backfills `gpsLat`/`gpsLng`
+  when a photo doesn't already have them (EXIF-derived coordinates are
+  never overwritten). Public `/places` gains a List/Map toggle: the Map
+  view (Leaflet + react-leaflet, plain OpenStreetMap tiles with a CSS
+  grayscale filter to keep the muted look — CARTO's free basemap now
+  requires an API key, so it's off the table) plots one pin per place
+  with at least one geotagged photo, labeled with the place name via a
+  permanent tooltip so it's readable without hovering or clicking;
+  clicking a pin opens that place's page. No schema change — `Photo.gpsLat`/`gpsLng` already existed and
+  were already populated from EXIF on upload. The geocode proxy requests
+  English results (`accept-language=en`) — Nominatim otherwise returns a
+  place's local-language name (e.g. "Crna Gora / Црна Гора" for
+  Montenegro).
 - Admin login supports two-factor authentication via an authenticator app
   (TOTP, RFC 6238), from the settings page: scan a QR code, confirm a code,
   get 8 one-time bcrypt-hashed backup codes shown once (for recovery if the
@@ -27,6 +46,65 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `/places`'s List/Map toggle sat in normal document flow below the
+  fixed site nav toggle and Leaflet's own zoom control lived inside the
+  map's own corner — moved both out to a single fixed cluster
+  (`top-6 right-6`, mirroring the nav toggle's own `top-6 left-6`) so
+  the zoom buttons sit immediately left of the List/Map switch instead
+  of inside the map. Leaflet's built-in zoom control is disabled
+  (`zoomControl={false}`) in favor of these, driven via a Leaflet map
+  instance `PlacesMap` now hands up through an `onMapReady` callback.
+  The zoom buttons are laid out side by side, not stacked.
+- A place's mosaic (`/places/[slug]`) showed a year label ("UNDATED",
+  "2019", ...) above each page and a wide gap between pages — both
+  `AlbumScrollView` settings an admin picks per real album
+  (`showChapterLabels`, `chapterLayout`), left at their defaults here
+  since a place's "chapters" are just synthesized year groupings, not
+  curated sections worth calling out. Hardcoded to off/`CONTINUOUS` for
+  places specifically.
+- `/places`'s Map view rendered blank on an actual phone in portrait,
+  despite looking correct in the mobile-emulation checks used to build
+  the previous fix below — Leaflet measures its container's pixel size
+  once, synchronously, at mount, and the previous fix's flexbox fill
+  chain (`flex-1`/`min-h-0` from `<main>` down to the map) needs a
+  second layout pass, after `<main>`'s `min-height` clamp resolves, to
+  actually grow that div; Leaflet's measurement can land inside that
+  gap and read 0. Replaced with a direct `calc(100dvh - <fixed
+  offsets>)` height on the map's wrapper (resolved in the first layout
+  pass, no race) and an `invalidateSize()` call on mount/resize as a
+  safety net (also fixes the map staying blank across an orientation
+  change).
+- A place's mosaic page with fewer than 4 photos (most often the last
+  page of a year) stretched its remaining photo(s) to fill the whole
+  page height instead of leaving the missing quadrant of the 2x2 grid
+  empty. `ChapterMosaic` gains an opt-in `minRowCount` prop — unused by
+  every other caller — that `/places/[slug]` sets to a full page's
+  worth of rows regardless of how many photos actually landed on it.
+- `/places`'s Map view had two mobile-portrait issues: Leaflet's own
+  panes/controls use `z-index` up to 1000 (`leaflet.css`), high enough
+  to render above the site nav's fullscreen menu instead of beneath it
+  (fixed with `isolate`, containing those values to the map itself);
+  and it sat squeezed into the same reserved left rail as the
+  text-heavy List view while stopping at a fixed `70vh` regardless of
+  how much vertical space was actually available, leaving mismatched
+  padding and dead space below it (fixed by dropping the reserved rail
+  — `data-gallery-view`, the same mechanism the album viewer uses — and
+  stretching to fill the viewport; landscape/desktop sizing is
+  unchanged).
+- A place's photo mosaic (`/places/[slug]`) still laid four same-sized
+  landscape photos out as one full-height row instead of a 2x2 grid,
+  even after deriving `rowSpan` from their real aspect ratio (previous
+  entry below): at `colSpan: 3`, four photos exactly fill one row width
+  (4 \* 3 = 12), and since nothing occupies the row(s) below them, each
+  still stretches to the mosaic's full height regardless of `rowSpan`.
+  `colSpan: 6` (two per row) makes `resolveGrid`'s auto-flow actually
+  wrap extra photos onto new rows.
+- A place's photo mosaic (`/places/[slug]`) forced every photo into the
+  same square cell (`colSpan: 3, rowSpan: 3`) regardless of its actual
+  shape, cropping landscape photos into tall slivers instead of reading
+  as the wide shots they are. `rowSpan` is now derived from each photo's
+  real aspect ratio (`rowSpanForAspectRatio`, the same helper the admin
+  editor's own aspect-locked placements use).
 - Deleting or editing an album never actually refreshed the public
   `/albums` (or `/places`) page — `revalidatePublicGalleries()` called
   `revalidatePath("/places", "layout")` / `revalidatePath("/albums",

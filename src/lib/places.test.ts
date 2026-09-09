@@ -6,6 +6,8 @@ const photo = (id: string, locationName: string | null, date: string | null) => 
   locationName,
   takenAt: date ? new Date(date) : null,
   createdAt: new Date("2026-01-01"),
+  gpsLat: null,
+  gpsLng: null,
 });
 
 describe("public place collections", () => {
@@ -39,6 +41,21 @@ describe("public place collections", () => {
     expect(places.find((p) => p.name === "Location not specified")?.photos).toHaveLength(
       2,
     );
+  });
+
+  it("uses the first photo with coordinates as the place's map position", () => {
+    const places = groupPhotosByPlace([
+      { ...photo("a", "Rome", null), gpsLat: null, gpsLng: null },
+      { ...photo("b", "Rome", null), gpsLat: 41.9, gpsLng: 12.5 },
+      { ...photo("c", "Rome", null), gpsLat: 41.8, gpsLng: 12.4 },
+      photo("d", "Undated Place", null),
+    ]);
+    const rome = places.find((p) => p.name === "Rome")!;
+    expect(rome.lat).toBe(41.9);
+    expect(rome.lng).toBe(12.5);
+    const undated = places.find((p) => p.name === "Undated Place")!;
+    expect(undated.lat).toBeNull();
+    expect(undated.lng).toBeNull();
   });
 
   it("does not reorder the input or use upload dates as capture dates", () => {

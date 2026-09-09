@@ -53,6 +53,13 @@ type ChapterMosaicProps = {
    * anything to fill. Off by default for contexts with no such height
    * (admin live preview, Storybook), which keep the fixed row height instead. */
   fitHeight?: boolean;
+  /** Floor for the grid's total row count (fitHeight only) — lets a
+   * caller reserve a full page's worth of height (e.g. a 2-row layout)
+   * even when fewer placements are actually present, so the last page
+   * of an overflow sequence leaves empty space below its content
+   * instead of stretching to fill it. Ignored when the placements'
+   * own natural row count is already taller. */
+  minRowCount?: number;
   /** Render the real 12-column grid (actual spans/positions) unconditionally
    * instead of behind the `gallery-wide:` breakpoint — for a caller that has
    * already decided in JS that a curated grid should render regardless of
@@ -72,9 +79,14 @@ export function ChapterMosaic({
   priority,
   fitHeight,
   forceGrid,
+  minRowCount,
 }: ChapterMosaicProps) {
   const positioned = resolveGrid(placements);
-  const rowCount = Math.max(1, ...positioned.map((p) => p.gridRow + p.rowSpan - 1));
+  const rowCount = Math.max(
+    1,
+    minRowCount ?? 0,
+    ...positioned.map((p) => p.gridRow + p.rowSpan - 1),
+  );
   return (
     <div
       className={cn(

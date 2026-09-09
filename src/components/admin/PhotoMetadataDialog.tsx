@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { LocationAutocomplete } from "@/components/admin/LocationAutocomplete";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -73,6 +74,7 @@ export function PhotoMetadataDialog({
     handleSubmit,
     watch,
     setValue,
+    getValues,
     formState: { errors, isSubmitting },
   } = useForm<PhotoMetadataFormInput, unknown, PhotoMetadataOutput>({
     resolver: zodResolver(photoMetadataSchema),
@@ -213,7 +215,22 @@ export function PhotoMetadataDialog({
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor={`locationName-${photo.id}`}>Location</Label>
-              <Input id={`locationName-${photo.id}`} {...register("locationName")} />
+              <LocationAutocomplete
+                id={`locationName-${photo.id}`}
+                value={watch("locationName") ?? ""}
+                onChange={(next) => setValue("locationName", next)}
+                onSelect={(result) => {
+                  // Only backfill coordinates when the photo doesn't
+                  // already have real ones (from EXIF, or a scanned
+                  // negative's own manual entry) — a country/city-level
+                  // geocoded pick shouldn't clobber a precise GPS tag.
+                  const { gpsLat, gpsLng } = getValues();
+                  if (gpsLat == null && gpsLng == null) {
+                    setValue("gpsLat", result.lat);
+                    setValue("gpsLng", result.lng);
+                  }
+                }}
+              />
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor={`takenAt-${photo.id}`}>Date taken</Label>

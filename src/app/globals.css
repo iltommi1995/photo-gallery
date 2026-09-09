@@ -239,3 +239,28 @@ body:has([data-rotate-notice]) [data-site-nav-toggle] {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.2 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   background-repeat: repeat;
 }
+
+/* Mutes OSM's default colorful tile style closer to this site's
+ * ink/paper palette on the /places map (PlacesMap.tsx) — plain OSM
+ * tiles are keyless, unlike CARTO's basemaps, which now require one. */
+.grayscale-map-tiles {
+  filter: grayscale(1) contrast(1.05) brightness(1.05);
+}
+
+/* Permanent per-marker name label on the /places map (PlacesMap.tsx) —
+ * overrides Leaflet's default white tooltip box + arrow to read as a
+ * plain ink-on-paper caption instead. */
+.leaflet-tooltip.place-map-label {
+  border: none;
+  border-radius: 2px;
+  background-color: var(--portfolio-paper);
+  color: var(--portfolio-ink);
+  font-family: var(--portfolio-font-mono);
+  font-size: 0.7rem;
+  font-weight: 500;
+  padding: 1px 5px;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 25%);
+}
+.leaflet-tooltip.place-map-label::before {
+  display: none;
+}
