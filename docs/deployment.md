@@ -115,19 +115,32 @@ docker buildx create --name photo-gallery-builder \
 docker buildx inspect --bootstrap
 ```
 
-`--use` makes it the default builder for future `docker build`/
-`docker compose build` invocations by that user — nothing else needs to
-reference it by name (or pass `BUILDX_BUILDER=photo-gallery-builder`
-explicitly if `--use` didn't stick, which some Compose/bake versions seem
-to need). This only needs to be done once — it survives reboots of the
+`--use` makes it the default builder for future `docker build`/`docker
+buildx build` invocations by that user — nothing else needs to reference
+it by name. This only needs to be done once — it survives reboots of the
 container itself, but **not** if the container running Docker gets
 rebooted (e.g. after resizing its RAM, see step 6): the builder's own
 backing container doesn't restart automatically, and re-running the two
 commands above (harmless if it already exists — `docker buildx rm
 photo-gallery-builder` first if `create` complains) fixes a
 `Can't reach database server at db:5432` failure during `RUN pnpm build`
-that otherwise looks identical to the network-not-supported error from a
-missing builder, but isn't the same problem.
+caused by a missing/dead builder — but isn't the only thing that
+produces that exact symptom, see below.
+
+**A correctly-configured, running, network-attached builder still isn't
+enough for `docker compose build`** — discovered live, after the above
+was already confirmed healthy and the failure persisted. BuildKit gates
+a build step's actual use of host networking behind a separate
+per-_invocation_ `network.host` **entitlement**, on top of the builder
+itself allowing it (`--allow-insecure-entitlement=network.host`, granted
+once at builder-creation time by `docker buildx create`, and already
+covered by the command above). `docker compose build` (→ `docker buildx
+bake` under the hood) does not request that entitlement, even with
+`network: host` set in `docker-compose.yml` — the build silently falls
+back to an isolated network with no route to `db`, indistinguishable
+from the missing-builder symptom above. `docker buildx build --network
+host --allow network.host` (used everywhere below instead of `docker
+compose build app`) requests it explicitly and actually works.
 
 ## 6. First boot
 
@@ -164,10 +177,16 @@ missing builder, but isn't the same problem.
 
 4. **Build the app image** (now that the schema — and, if you seeded, the
    data — exists, `next build`'s static generation succeeds), and **start
-   everything:**
+   everything.** Not `docker compose build app` — see the note at the end
+   of §5 above for why:
 
    ```bash
-   docker compose build app
+   set -a; source .env; set +a
+   docker buildx build \
+     --network host --allow network.host \
+     --build-arg DATABASE_URL="${DATABASE_URL}" \
+     --build-arg NEXT_PUBLIC_SITE_URL="${NEXT_PUBLIC_SITE_URL}" \
+     --load -t photo-gallery-app:latest .
    docker compose up -d
    ```
 
@@ -289,7 +308,12 @@ docker compose up -d db          # make sure it's running/healthy
 docker build --target migrator -t photo-gallery-migrator .
 docker run --rm --network photo-gallery-net --env-file .env \
   photo-gallery-migrator
-docker compose build app
+set -a; source .env; set +a
+docker buildx build \
+  --network host --allow network.host \
+  --build-arg DATABASE_URL="${DATABASE_URL}" \
+  --build-arg NEXT_PUBLIC_SITE_URL="${NEXT_PUBLIC_SITE_URL}" \
+  --load -t photo-gallery-app:latest .
 docker compose up -d app
 ```
 

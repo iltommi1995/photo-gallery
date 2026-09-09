@@ -61,6 +61,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The deploy pipeline's "Build and deploy app" step could fail with
+  `Can't reach database server at db:5432` from inside `RUN pnpm build`
+  even with the network-attached buildx builder correctly set up and
+  running (see docs/deployment.md §5) — `docker compose build app` (→
+  `docker buildx bake`) never actually requests BuildKit's separate
+  per-build `network.host` entitlement that using host networking in a
+  RUN step requires, regardless of `network: host` being set in
+  `docker-compose.yml`. Replaced with `docker buildx build --network
+  host --allow network.host` directly (`--load`-ed under the same tag
+  Compose expects, so `docker compose up -d app` starts it without
+  rebuilding) — confirmed live to actually reach `db`, where the
+  compose-build path silently didn't.
 - `/places`'s List/Map toggle sat in normal document flow below the
   fixed site nav toggle and Leaflet's own zoom control lived inside the
   map's own corner — moved both out to a single fixed cluster

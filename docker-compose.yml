@@ -46,6 +46,17 @@ services:
       # --driver-opt network=photo-gallery-net --use`, one-time, documented
       # in docs/deployment.md) — that's what actually lets the build reach
       # `db` (see the Dockerfile builder-stage comment for why it needs to).
+      #
+      # This field alone is NOT sufficient, though, and nothing here
+      # actually depends on it anymore: `docker compose build` (→ `docker
+      # buildx bake`) never grants BuildKit's separate per-build
+      # `network.host` entitlement that using host networking in a RUN
+      # step actually requires, `network: host` here or not — discovered
+      # live, kept only as documentation/for anyone who still reaches for
+      # `docker compose build app` out of habit. Every documented deploy
+      # path (`.github/workflows/deploy.yml`, docs/deployment.md) uses
+      # `docker buildx build --network host --allow network.host`
+      # directly instead, which does grant it.
       network: host
       args:
         DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
