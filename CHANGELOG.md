@@ -21,8 +21,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   view (Leaflet + react-leaflet, plain OpenStreetMap tiles with a CSS
   grayscale filter to keep the muted look — CARTO's free basemap now
   requires an API key, so it's off the table) plots one pin per place
-  with at least one geotagged photo; clicking a pin opens that place's
-  page. No schema change — `Photo.gpsLat`/`gpsLng` already existed and
+  with at least one geotagged photo, labeled with the place name via a
+  permanent tooltip so it's readable without hovering or clicking;
+  clicking a pin opens that place's page. No schema change — `Photo.gpsLat`/`gpsLng` already existed and
   were already populated from EXIF on upload. The geocode proxy requests
   English results (`accept-language=en`) — Nominatim otherwise returns a
   place's local-language name (e.g. "Crna Gora / Црна Гора" for

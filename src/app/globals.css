@@ -246,3 +246,21 @@ body:has([data-rotate-notice]) [data-site-nav-toggle] {
 .grayscale-map-tiles {
   filter: grayscale(1) contrast(1.05) brightness(1.05);
 }
+
+/* Permanent per-marker name label on the /places map (PlacesMap.tsx) —
+ * overrides Leaflet's default white tooltip box + arrow to read as a
+ * plain ink-on-paper caption instead. */
+.leaflet-tooltip.place-map-label {
+  border: none;
+  border-radius: 2px;
+  background-color: var(--portfolio-paper);
+  color: var(--portfolio-ink);
+  font-family: var(--portfolio-font-mono);
+  font-size: 0.7rem;
+  font-weight: 500;
+  padding: 1px 5px;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 25%);
+}
+.leaflet-tooltip.place-map-label::before {
+  display: none;
+}

@@ -4,7 +4,7 @@ import "leaflet/dist/leaflet.css";
 
 import { divIcon } from "leaflet";
 import { useRouter } from "next/navigation";
-import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
+import { MapContainer, Marker, Popup, TileLayer, Tooltip } from "react-leaflet";
 
 export type MapPlace = {
   slug: string;
@@ -69,6 +69,15 @@ export function PlacesMap({ places }: PlacesMapProps) {
               click: () => router.push(`/places/${encodeURIComponent(place.slug)}`),
             }}
           >
+            <Tooltip
+              permanent
+              direction="right"
+              offset={[8, 0]}
+              opacity={1}
+              className="place-map-label"
+            >
+              {place.name}
+            </Tooltip>
             <Popup>
               <span className="font-medium">{place.name}</span>
               <br />
