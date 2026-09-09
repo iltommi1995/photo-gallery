@@ -48,9 +48,17 @@ export function PlacesMap({ places }: PlacesMapProps) {
   return (
     <div className="h-[70vh] w-full overflow-hidden rounded-lg">
       <MapContainer center={[20, 0]} zoom={2} scrollWheelZoom className="h-full w-full">
+        {/*
+          CARTO's free "Positron" basemap now requires an API key (a
+          policy change after this was first wired up) — plain OSM tiles
+          stay keyless, with a grayscale filter (className below, styled
+          in globals.css) to keep the muted look this site wants instead
+          of OSM's default colorful style.
+        */}
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-          url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          className="grayscale-map-tiles"
         />
         {places.map((place) => (
           <Marker

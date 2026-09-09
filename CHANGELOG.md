@@ -18,13 +18,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   places on `/places`. Picking a result also backfills `gpsLat`/`gpsLng`
   when a photo doesn't already have them (EXIF-derived coordinates are
   never overwritten). Public `/places` gains a List/Map toggle: the Map
-  view (Leaflet + react-leaflet, CARTO's light basemap) plots one pin
-  per place with at least one geotagged photo; clicking a pin opens that
-  place's page. No schema change — `Photo.gpsLat`/`gpsLng` already
-  existed and were already populated from EXIF on upload. The geocode
-  proxy requests English results (`accept-language=en`) — Nominatim
-  otherwise returns a place's local-language name (e.g. "Crna Gora /
-  Црна Гора" for Montenegro).
+  view (Leaflet + react-leaflet, plain OpenStreetMap tiles with a CSS
+  grayscale filter to keep the muted look — CARTO's free basemap now
+  requires an API key, so it's off the table) plots one pin per place
+  with at least one geotagged photo; clicking a pin opens that place's
+  page. No schema change — `Photo.gpsLat`/`gpsLng` already existed and
+  were already populated from EXIF on upload. The geocode proxy requests
+  English results (`accept-language=en`) — Nominatim otherwise returns a
+  place's local-language name (e.g. "Crna Gora / Црна Гора" for
+  Montenegro).
 - Admin login supports two-factor authentication via an authenticator app
   (TOTP, RFC 6238), from the settings page: scan a QR code, confirm a code,
   get 8 one-time bcrypt-hashed backup codes shown once (for recovery if the

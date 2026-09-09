@@ -239,3 +239,10 @@ body:has([data-rotate-notice]) [data-site-nav-toggle] {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.2 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   background-repeat: repeat;
 }
+
+/* Mutes OSM's default colorful tile style closer to this site's
+ * ink/paper palette on the /places map (PlacesMap.tsx) — plain OSM
+ * tiles are keyless, unlike CARTO's basemaps, which now require one. */
+.grayscale-map-tiles {
+  filter: grayscale(1) contrast(1.05) brightness(1.05);
+}
