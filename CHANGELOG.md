@@ -46,6 +46,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- A place's mosaic (`/places/[slug]`) showed a year label ("UNDATED",
+  "2019", ...) above each page and a wide gap between pages — both
+  `AlbumScrollView` settings an admin picks per real album
+  (`showChapterLabels`, `chapterLayout`), left at their defaults here
+  since a place's "chapters" are just synthesized year groupings, not
+  curated sections worth calling out. Hardcoded to off/`CONTINUOUS` for
+  places specifically.
 - `/places`'s Map view rendered blank on an actual phone in portrait,
   despite looking correct in the mobile-emulation checks used to build
   the previous fix below — Leaflet measures its container's pixel size

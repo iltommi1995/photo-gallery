@@ -100,6 +100,11 @@ export default async function PlacePage({ params }: PlacePageProps) {
       // view never has one; it always falls back to the chapters above.
       mobileLandscapeChapters={[]}
       mobilePortraitChapters={[]}
+      // Both admin-configurable per real album — hardcoded here instead,
+      // since a place's "chapters" are just synthesized year groupings,
+      // not curated sections worth a title or a page-break between them.
+      showChapterLabels={false}
+      chapterLayout="CONTINUOUS"
     />
   );
 }
