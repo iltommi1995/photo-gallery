@@ -54,6 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   of inside the map. Leaflet's built-in zoom control is disabled
   (`zoomControl={false}`) in favor of these, driven via a Leaflet map
   instance `PlacesMap` now hands up through an `onMapReady` callback.
+  The zoom buttons are laid out side by side, not stacked.
 - A place's mosaic (`/places/[slug]`) showed a year label ("UNDATED",
   "2019", ...) above each page and a wide gap between pages — both
   `AlbumScrollView` settings an admin picks per real album

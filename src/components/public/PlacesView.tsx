@@ -47,12 +47,12 @@ export function PlacesView({ items, mapPlaces, emptyMessage }: PlacesViewProps) 
        * toggle) so opening the menu covers it like the rest of the page. */}
       <div className="fixed top-6 right-6 z-40 flex items-center gap-2">
         {view === "map" && mapInstance && (
-          <div className="bg-portfolio-paper ring-portfolio-ink/10 flex flex-col overflow-hidden rounded-lg shadow-md ring-1">
+          <div className="bg-portfolio-paper ring-portfolio-ink/10 flex overflow-hidden rounded-lg shadow-md ring-1">
             <button
               type="button"
               aria-label="Zoom in"
               onClick={() => mapInstance.zoomIn()}
-              className="text-portfolio-ink hover:bg-portfolio-ink/5 flex size-8 items-center justify-center border-b border-portfolio-ink/10"
+              className="text-portfolio-ink hover:bg-portfolio-ink/5 flex size-8 items-center justify-center border-r border-portfolio-ink/10"
             >
               <PlusIcon className="size-4" />
             </button>
