@@ -1,0 +1,74 @@
+"use client";
+
+import "leaflet/dist/leaflet.css";
+
+import { divIcon } from "leaflet";
+import { useRouter } from "next/navigation";
+import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
+
+export type MapPlace = {
+  slug: string;
+  name: string;
+  photoCount: number;
+  lat: number;
+  lng: number;
+};
+
+type PlacesMapProps = {
+  places: MapPlace[];
+};
+
+// A plain colored dot instead of Leaflet's default marker icon — sidesteps
+// the well-known bundler-asset-path issue with the default icon images,
+// and reads closer to this site's minimal red-accent identity.
+const markerIcon = divIcon({
+  className: "",
+  html: '<span class="block size-3 rounded-full bg-portfolio-accent ring-2 ring-portfolio-paper" style="box-shadow: 0 1px 3px rgb(0 0 0 / 40%)"></span>',
+  iconSize: [12, 12],
+  iconAnchor: [6, 6],
+});
+
+/**
+ * World map of every place with at least one geotagged photo — a
+ * lat/lng only comes from a photo's own EXIF GPS or a manually picked
+ * geocoded location (see LocationAutocomplete), so places with neither
+ * simply don't appear here (they still show fine in the list view).
+ */
+export function PlacesMap({ places }: PlacesMapProps) {
+  const router = useRouter();
+
+  if (places.length === 0) {
+    return (
+      <p className="text-portfolio-ink/60 text-sm">
+        No geotagged photos yet — add a location to a photo to see it here.
+      </p>
+    );
+  }
+
+  return (
+    <div className="h-[70vh] w-full overflow-hidden rounded-lg">
+      <MapContainer center={[20, 0]} zoom={2} scrollWheelZoom className="h-full w-full">
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+          url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+        />
+        {places.map((place) => (
+          <Marker
+            key={place.slug}
+            position={[place.lat, place.lng]}
+            icon={markerIcon}
+            eventHandlers={{
+              click: () => router.push(`/places/${encodeURIComponent(place.slug)}`),
+            }}
+          >
+            <Popup>
+              <span className="font-medium">{place.name}</span>
+              <br />
+              {place.photoCount} {place.photoCount === 1 ? "photo" : "photos"}
+            </Popup>
+          </Marker>
+        ))}
+      </MapContainer>
+    </div>
+  );
+}

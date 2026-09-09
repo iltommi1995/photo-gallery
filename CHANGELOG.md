@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Admin photo metadata: the Location field is now a type-ahead search
+  (`LocationAutocomplete`, built on base-ui's `Combobox`) against
+  OpenStreetMap's Nominatim geocoder (proxied through
+  `/api/admin/geocode` to attach the required `User-Agent` and apply
+  rate limiting), so picking "Montenegro" from a list of real places
+  replaces free-typing it — no more typos silently creating duplicate
+  places on `/places`. Picking a result also backfills `gpsLat`/`gpsLng`
+  when a photo doesn't already have them (EXIF-derived coordinates are
+  never overwritten). Public `/places` gains a List/Map toggle: the Map
+  view (Leaflet + react-leaflet, CARTO's light basemap) plots one pin
+  per place with at least one geotagged photo; clicking a pin opens that
+  place's page. No schema change — `Photo.gpsLat`/`gpsLng` already
+  existed and were already populated from EXIF on upload.
 - Admin login supports two-factor authentication via an authenticator app
   (TOTP, RFC 6238), from the settings page: scan a QR code, confirm a code,
   get 8 one-time bcrypt-hashed backup codes shown once (for recovery if the
