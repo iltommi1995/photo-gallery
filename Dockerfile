@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 # Multi-stage build for Next.js. Because Home, /places, /about, and
 # published albums are statically generated (ISR), `next build` needs a
 # reachable, migrated Postgres — see docs/deployment.md for why the build
@@ -16,7 +17,13 @@ RUN corepack enable
 FROM base AS deps
 WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-RUN pnpm install --frozen-lockfile
+# BuildKit cache mount for pnpm's own package store, persisted in the
+# network-attached buildx builder's own storage (see docs/deployment.md
+# §5) across builds — this layer is already skipped by Docker's normal
+# layer cache whenever the lockfile doesn't change, so this mainly helps
+# the (less common) case where it does.
+RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
+  pnpm install --frozen-lockfile
 
 # --- migrator: run `prisma migrate deploy` / the seed script against `db`
 # BEFORE building `app` — the builder stage's static generation needs the
@@ -56,7 +63,13 @@ ENV NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
 ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN pnpm prisma generate
-RUN pnpm build
+# BuildKit cache mount for Next's own build cache (webpack/Turbopack
+# module cache) — unlike the deps stage above, `COPY . .` invalidates
+# on every source change, so without this every deploy recompiled from
+# scratch regardless of how little actually changed. Persisted the same
+# way, in the builder's own storage.
+RUN --mount=type=cache,id=next-build-cache,target=/app/.next/cache \
+  pnpm build
 
 FROM base AS runner
 WORKDIR /app

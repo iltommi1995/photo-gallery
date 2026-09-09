@@ -44,6 +44,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   gains `totpSecret`, `totpEnabled`, `totpLastUsedStep`, `backupCodes`
   (migration `20260908081633_add_admin_totp_fields`, purely additive).
 
+### Changed
+
+- Sped up the deploy pipeline's `docker compose build app` step (the
+  single slowest part of `deploy.yml`, minutes long even for a small
+  change): `next build` was re-typechecking the whole project from
+  scratch on top of what compilation already needed, purely duplicate
+  work since the `verify` job already gates `deploy` on `pnpm
+  typecheck` passing first — skipped via
+  `typescript: { ignoreBuildErrors: true }` in `next.config.ts` (Next
+  16 has no equivalent built-in ESLint step left to skip alongside it).
+  Also added BuildKit cache mounts (`RUN --mount=type=cache`) for
+  pnpm's package store and Next's own build cache, persisted in the
+  network-attached buildx builder's own storage (docs/deployment.md
+  §5) across builds instead of starting cold every deploy.
+
 ### Fixed
 
 - `/places`'s List/Map toggle sat in normal document flow below the
