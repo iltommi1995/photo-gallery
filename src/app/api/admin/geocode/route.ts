@@ -37,6 +37,7 @@ export async function GET(request: Request) {
   nominatimUrl.searchParams.set("format", "json");
   nominatimUrl.searchParams.set("q", parsed.data.q);
   nominatimUrl.searchParams.set("limit", "8");
+  nominatimUrl.searchParams.set("accept-language", "en");
 
   const res = await fetch(nominatimUrl, {
     headers: { "User-Agent": `photo-gallery (${siteUrl})` },

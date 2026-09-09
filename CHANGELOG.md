@@ -21,7 +21,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   view (Leaflet + react-leaflet, CARTO's light basemap) plots one pin
   per place with at least one geotagged photo; clicking a pin opens that
   place's page. No schema change — `Photo.gpsLat`/`gpsLng` already
-  existed and were already populated from EXIF on upload.
+  existed and were already populated from EXIF on upload. The geocode
+  proxy requests English results (`accept-language=en`) — Nominatim
+  otherwise returns a place's local-language name (e.g. "Crna Gora /
+  Црна Гора" for Montenegro).
 - Admin login supports two-factor authentication via an authenticator app
   (TOTP, RFC 6238), from the settings page: scan a QR code, confirm a code,
   get 8 one-time bcrypt-hashed backup codes shown once (for recovery if the
