@@ -7,11 +7,17 @@ import { groupPhotosByYear } from "@/lib/places";
 import { prisma } from "@/lib/db";
 
 // Auto-generated chapters have no admin-picked sizes, unlike a real
-// album — a fixed square (colSpan 3, rowSpan 3) for every photo crops
-// wide landscape shots into tall slivers. Keep colSpan fixed and derive
-// rowSpan from each photo's real width/height instead, so a landscape
-// photo reads as a wide cell and a portrait photo as a tall one.
-const PLACE_PHOTO_COL_SPAN = 3;
+// album. Two fixed columns (colSpan 6 of the 12-column grid) — not four
+// (colSpan 3) — because resolveGrid's auto-flow only wraps to a new row
+// once a row's width is full: four same-sized landscape photos at
+// colSpan 3 fill one row exactly (4 * 3 = 12) and, since nothing
+// occupies the row(s) below them, each still stretches to the mosaic's
+// full height regardless of rowSpan — colSpan 3 never actually produced
+// a 2-row layout. At colSpan 6, two photos fill a row and the rest wrap
+// below it. rowSpan is still derived per photo from its real
+// width/height, so a landscape photo reads as a wide cell within its
+// half-width column and a portrait photo as a tall one.
+const PLACE_PHOTO_COL_SPAN = 6;
 
 export const revalidate = 3600;
 type PlacePageProps = { params: Promise<{ slug: string }> };

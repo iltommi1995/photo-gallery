@@ -57,6 +57,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   — `data-gallery-view`, the same mechanism the album viewer uses — and
   stretching to fill the viewport; landscape/desktop sizing is
   unchanged).
+- A place's photo mosaic (`/places/[slug]`) still laid four same-sized
+  landscape photos out as one full-height row instead of a 2x2 grid,
+  even after deriving `rowSpan` from their real aspect ratio (previous
+  entry below): at `colSpan: 3`, four photos exactly fill one row width
+  (4 \* 3 = 12), and since nothing occupies the row(s) below them, each
+  still stretches to the mosaic's full height regardless of `rowSpan`.
+  `colSpan: 6` (two per row) makes `resolveGrid`'s auto-flow actually
+  wrap extra photos onto new rows.
 - A place's photo mosaic (`/places/[slug]`) forced every photo into the
   same square cell (`colSpan: 3, rowSpan: 3`) regardless of its actual
   shape, cropping landscape photos into tall slivers instead of reading
