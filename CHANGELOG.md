@@ -57,6 +57,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   — `data-gallery-view`, the same mechanism the album viewer uses — and
   stretching to fill the viewport; landscape/desktop sizing is
   unchanged).
+- A place's photo mosaic (`/places/[slug]`) forced every photo into the
+  same square cell (`colSpan: 3, rowSpan: 3`) regardless of its actual
+  shape, cropping landscape photos into tall slivers instead of reading
+  as the wide shots they are. `rowSpan` is now derived from each photo's
+  real aspect ratio (`rowSpanForAspectRatio`, the same helper the admin
+  editor's own aspect-locked placements use).
 - Deleting or editing an album never actually refreshed the public
   `/albums` (or `/places`) page — `revalidatePublicGalleries()` called
   `revalidatePath("/places", "layout")` / `revalidatePath("/albums",

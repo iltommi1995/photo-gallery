@@ -1,9 +1,17 @@
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import { AlbumScrollView, type ScrollChapter } from "@/components/public/AlbumScrollView";
+import { rowSpanForAspectRatio } from "@/lib/gallery/aspect-ratio";
 import { getPublicPlaces } from "@/lib/public-places";
 import { groupPhotosByYear } from "@/lib/places";
 import { prisma } from "@/lib/db";
+
+// Auto-generated chapters have no admin-picked sizes, unlike a real
+// album — a fixed square (colSpan 3, rowSpan 3) for every photo crops
+// wide landscape shots into tall slivers. Keep colSpan fixed and derive
+// rowSpan from each photo's real width/height instead, so a landscape
+// photo reads as a wide cell and a portrait photo as a tall one.
+const PLACE_PHOTO_COL_SPAN = 3;
 
 export const revalidate = 3600;
 type PlacePageProps = { params: Promise<{ slug: string }> };
@@ -50,8 +58,12 @@ export default async function PlacePage({ params }: PlacePageProps) {
           placements: photos.slice(offset, offset + 8).map((photo) => ({
             id: photo.id,
             type: "PHOTO" as const,
-            colSpan: 3,
-            rowSpan: 3,
+            colSpan: PLACE_PHOTO_COL_SPAN,
+            rowSpan: rowSpanForAspectRatio(
+              PLACE_PHOTO_COL_SPAN,
+              photo.width,
+              photo.height,
+            ),
             photo,
           })),
         });
