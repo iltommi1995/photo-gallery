@@ -33,7 +33,7 @@ export function PlacesView({ items, mapPlaces, emptyMessage }: PlacesViewProps) 
   const [view, setView] = useState<"list" | "map">("list");
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-6">
+    <div className="flex flex-col gap-6">
       <Tabs value={view} onValueChange={(value) => setView(value as "list" | "map")}>
         <TabsList>
           <TabsTrigger value="list">List</TabsTrigger>
@@ -45,11 +45,23 @@ export function PlacesView({ items, mapPlaces, emptyMessage }: PlacesViewProps) 
       ) : (
         // data-gallery-view drops .portfolio-content's reserved left rail
         // (see globals.css) — a map wants full width, unlike the List
-        // view's indented reading column. min-h-0/flex-1 lets the map
-        // stretch down to fill the viewport in portrait mobile instead of
-        // stopping at a fixed height with dead space below it (see
-        // page.tsx's matching flex/min-h-dvh on <main>).
-        <div data-gallery-view className="min-h-0 flex-1">
+        // view's indented reading column.
+        //
+        // Height: a flex-1/min-h-0 fill chain up through <main> looked
+        // right but left the map permanently blank on a real phone —
+        // Leaflet measures its container's pixel size once, synchronously,
+        // at mount, and flexbox needs a second layout pass (after <main>'s
+        // min-height clamp resolves) to actually grow this div, which can
+        // still read as 0 at that exact moment. A direct dvh-based calc()
+        // is resolved in the first layout pass, no second pass or race —
+        // 11rem/12rem below is <main>'s own pt-24/sm:pt-28 + its bottom
+        // portfolio-gutter (1.5rem) + this gap (gap-6, 1.5rem) + the Tabs
+        // row (h-8, 2rem). gallery-wide is excluded: PlacesMap sets its
+        // own fixed 70vh there regardless of this wrapper's height.
+        <div
+          data-gallery-view
+          className="h-[calc(100dvh-11rem)] sm:h-[calc(100dvh-12rem)] gallery-wide:h-auto"
+        >
           <PlacesMap places={mapPlaces} />
         </div>
       )}

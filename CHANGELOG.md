@@ -46,6 +46,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `/places`'s Map view rendered blank on an actual phone in portrait,
+  despite looking correct in the mobile-emulation checks used to build
+  the previous fix below — Leaflet measures its container's pixel size
+  once, synchronously, at mount, and the previous fix's flexbox fill
+  chain (`flex-1`/`min-h-0` from `<main>` down to the map) needs a
+  second layout pass, after `<main>`'s `min-height` clamp resolves, to
+  actually grow that div; Leaflet's measurement can land inside that
+  gap and read 0. Replaced with a direct `calc(100dvh - <fixed
+  offsets>)` height on the map's wrapper (resolved in the first layout
+  pass, no race) and an `invalidateSize()` call on mount/resize as a
+  safety net (also fixes the map staying blank across an orientation
+  change).
 - `/places`'s Map view had two mobile-portrait issues: Leaflet's own
   panes/controls use `z-index` up to 1000 (`leaflet.css`), high enough
   to render above the site nav's fullscreen menu instead of beneath it

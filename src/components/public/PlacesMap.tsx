@@ -2,9 +2,10 @@
 
 import "leaflet/dist/leaflet.css";
 
+import { useEffect } from "react";
 import { divIcon } from "leaflet";
 import { useRouter } from "next/navigation";
-import { MapContainer, Marker, Popup, TileLayer, Tooltip } from "react-leaflet";
+import { MapContainer, Marker, Popup, TileLayer, Tooltip, useMap } from "react-leaflet";
 
 export type MapPlace = {
   slug: string;
@@ -27,6 +28,27 @@ const markerIcon = divIcon({
   iconSize: [12, 12],
   iconAnchor: [6, 6],
 });
+
+// Leaflet measures its container's pixel size once, synchronously, when
+// the map is created. The map's own wrapper height here is resolved by
+// flexbox (fills the viewport in portrait mobile — see globals.css/
+// PlacesView.tsx), which can still be 0 at that exact moment if the
+// browser hasn't finished the flex layout pass yet, leaving Leaflet
+// permanently convinced the map is 0x0 (blank, no tiles) until
+// something forces a re-measure. invalidateSize() does that re-measure
+// — once after mount (layout has settled by then) and again on resize
+// (covers rotating the phone, or the RotateDeviceNotice banner
+// dismissing and changing the available height).
+function MapSizeInvalidator() {
+  const map = useMap();
+  useEffect(() => {
+    map.invalidateSize();
+    const onResize = () => map.invalidateSize();
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [map]);
+  return null;
+}
 
 /**
  * World map of every place with at least one geotagged photo — a
@@ -53,6 +75,7 @@ export function PlacesMap({ places }: PlacesMapProps) {
     // those values stay contained to the map itself.
     <div className="isolate h-full w-full overflow-hidden rounded-lg gallery-wide:h-[70vh]">
       <MapContainer center={[20, 0]} zoom={2} scrollWheelZoom className="h-full w-full">
+        <MapSizeInvalidator />
         {/*
           CARTO's free "Positron" basemap now requires an API key (a
           policy change after this was first wired up) — plain OSM tiles
