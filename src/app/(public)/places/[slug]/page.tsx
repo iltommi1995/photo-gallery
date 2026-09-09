@@ -18,6 +18,12 @@ import { prisma } from "@/lib/db";
 // width/height, so a landscape photo reads as a wide cell within its
 // half-width column and a portrait photo as a tall one.
 const PLACE_PHOTO_COL_SPAN = 6;
+// Each synthesized page holds exactly a 2x2 grid (2 columns from
+// colSpan 6 above * 2 rows) — beyond 4 photos, the next 4 become a new
+// page (chapter section) instead of stacking further rows onto the same
+// one, matching how a real album's chapters are separate horizontal
+// pages rather than one ever-taller mosaic.
+const PLACE_PHOTOS_PER_PAGE = 4;
 
 export const revalidate = 3600;
 type PlacePageProps = { params: Promise<{ slug: string }> };
@@ -57,19 +63,26 @@ export default async function PlacePage({ params }: PlacePageProps) {
     ({ label, photos }) => {
       const sections: ScrollChapter[] = [];
       // Keep long years in manageable mosaics without changing chronological order.
-      for (let offset = 0; offset < photos.length; offset += 8) {
+      for (let offset = 0; offset < photos.length; offset += PLACE_PHOTOS_PER_PAGE) {
+        const pagePhotos = photos.slice(offset, offset + PLACE_PHOTOS_PER_PAGE);
+        const rowSpans = pagePhotos.map((photo) =>
+          rowSpanForAspectRatio(PLACE_PHOTO_COL_SPAN, photo.width, photo.height),
+        );
+        // A page with fewer than 4 photos (the last page of a year, most
+        // often) would otherwise stretch its remaining photo(s) to fill
+        // the whole page height instead of leaving the missing quadrant
+        // empty — reserve the full 2-row grid using the top row's own
+        // rowSpan as the unit, even if the bottom row has no photos.
+        const minRowCount = Math.max(...rowSpans.slice(0, 2)) * 2;
         sections.push({
           id: `${place.slug}-${label}-${offset}`,
           label,
-          placements: photos.slice(offset, offset + 8).map((photo) => ({
+          minRowCount,
+          placements: pagePhotos.map((photo, index) => ({
             id: photo.id,
             type: "PHOTO" as const,
             colSpan: PLACE_PHOTO_COL_SPAN,
-            rowSpan: rowSpanForAspectRatio(
-              PLACE_PHOTO_COL_SPAN,
-              photo.width,
-              photo.height,
-            ),
+            rowSpan: rowSpans[index],
             photo,
           })),
         });

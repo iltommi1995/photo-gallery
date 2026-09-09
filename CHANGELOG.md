@@ -58,6 +58,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   pass, no race) and an `invalidateSize()` call on mount/resize as a
   safety net (also fixes the map staying blank across an orientation
   change).
+- A place's mosaic page with fewer than 4 photos (most often the last
+  page of a year) stretched its remaining photo(s) to fill the whole
+  page height instead of leaving the missing quadrant of the 2x2 grid
+  empty. `ChapterMosaic` gains an opt-in `minRowCount` prop — unused by
+  every other caller — that `/places/[slug]` sets to a full page's
+  worth of rows regardless of how many photos actually landed on it.
 - `/places`'s Map view had two mobile-portrait issues: Leaflet's own
   panes/controls use `z-index` up to 1000 (`leaflet.css`), high enough
   to render above the site nav's fullscreen menu instead of beneath it

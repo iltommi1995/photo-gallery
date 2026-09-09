@@ -18,6 +18,9 @@ export type ScrollChapter = {
     | (Extract<MosaicPlacement, { type: "PHOTO" }> & { photo: LightboxPhoto })
     | Extract<MosaicPlacement, { type: "TEXT" }>
   )[];
+  /** See ChapterMosaic's own minRowCount — reserves a full page's height
+   * even when this chapter has fewer placements than a full page. */
+  minRowCount?: number;
 };
 
 type AlbumScrollViewProps = {
@@ -165,6 +168,7 @@ export function AlbumScrollView({
               itemClassName="bg-portfolio-grain"
               className="gallery-wide:min-h-0 gallery-wide:flex-1"
               fitHeight
+              minRowCount={chapter.minRowCount}
             />
           </section>
         ))}
