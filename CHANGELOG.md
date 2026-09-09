@@ -46,6 +46,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `/places`'s List/Map toggle sat in normal document flow below the
+  fixed site nav toggle and Leaflet's own zoom control lived inside the
+  map's own corner — moved both out to a single fixed cluster
+  (`top-6 right-6`, mirroring the nav toggle's own `top-6 left-6`) so
+  the zoom buttons sit immediately left of the List/Map switch instead
+  of inside the map. Leaflet's built-in zoom control is disabled
+  (`zoomControl={false}`) in favor of these, driven via a Leaflet map
+  instance `PlacesMap` now hands up through an `onMapReady` callback.
 - A place's mosaic (`/places/[slug]`) showed a year label ("UNDATED",
   "2019", ...) above each page and a wide gap between pages — both
   `AlbumScrollView` settings an admin picks per real album

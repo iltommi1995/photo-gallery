@@ -3,7 +3,7 @@
 import "leaflet/dist/leaflet.css";
 
 import { useEffect } from "react";
-import { divIcon } from "leaflet";
+import { divIcon, type Map as LeafletMap } from "leaflet";
 import { useRouter } from "next/navigation";
 import { MapContainer, Marker, Popup, TileLayer, Tooltip, useMap } from "react-leaflet";
 
@@ -17,6 +17,11 @@ export type MapPlace = {
 
 type PlacesMapProps = {
   places: MapPlace[];
+  /** Hands the underlying Leaflet map instance up to the caller once
+   * ready — used to drive zoom from a page-level control instead of
+   * Leaflet's own built-in one (disabled below), which the caller
+   * wants positioned outside the map itself. */
+  onMapReady?: (map: LeafletMap) => void;
 };
 
 // A plain colored dot instead of Leaflet's default marker icon — sidesteps
@@ -50,13 +55,21 @@ function MapSizeInvalidator() {
   return null;
 }
 
+function MapReadyNotifier({ onMapReady }: { onMapReady: (map: LeafletMap) => void }) {
+  const map = useMap();
+  useEffect(() => {
+    onMapReady(map);
+  }, [map, onMapReady]);
+  return null;
+}
+
 /**
  * World map of every place with at least one geotagged photo — a
  * lat/lng only comes from a photo's own EXIF GPS or a manually picked
  * geocoded location (see LocationAutocomplete), so places with neither
  * simply don't appear here (they still show fine in the list view).
  */
-export function PlacesMap({ places }: PlacesMapProps) {
+export function PlacesMap({ places, onMapReady }: PlacesMapProps) {
   const router = useRouter();
 
   if (places.length === 0) {
@@ -74,8 +87,15 @@ export function PlacesMap({ places }: PlacesMapProps) {
     // fullscreen menu. Isolating creates a local stacking context so
     // those values stay contained to the map itself.
     <div className="isolate h-full w-full overflow-hidden rounded-lg gallery-wide:h-[70vh]">
-      <MapContainer center={[20, 0]} zoom={2} scrollWheelZoom className="h-full w-full">
+      <MapContainer
+        center={[20, 0]}
+        zoom={2}
+        scrollWheelZoom
+        zoomControl={false}
+        className="h-full w-full"
+      >
         <MapSizeInvalidator />
+        {onMapReady && <MapReadyNotifier onMapReady={onMapReady} />}
         {/*
           CARTO's free "Positron" basemap now requires an API key (a
           policy change after this was first wired up) — plain OSM tiles
