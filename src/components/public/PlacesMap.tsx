@@ -46,7 +46,12 @@ export function PlacesMap({ places }: PlacesMapProps) {
   }
 
   return (
-    <div className="h-[70vh] w-full overflow-hidden rounded-lg">
+    // isolate: Leaflet's own panes/controls use z-index up to 1000
+    // (leaflet.css), which otherwise compete in the page's global
+    // stacking order and can end up above fixed UI like the site nav's
+    // fullscreen menu. Isolating creates a local stacking context so
+    // those values stay contained to the map itself.
+    <div className="isolate h-full w-full overflow-hidden rounded-lg gallery-wide:h-[70vh]">
       <MapContainer center={[20, 0]} zoom={2} scrollWheelZoom className="h-full w-full">
         {/*
           CARTO's free "Positron" basemap now requires an API key (a

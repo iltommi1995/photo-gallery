@@ -33,7 +33,7 @@ export function PlacesView({ items, mapPlaces, emptyMessage }: PlacesViewProps) 
   const [view, setView] = useState<"list" | "map">("list");
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex min-h-0 flex-1 flex-col gap-6">
       <Tabs value={view} onValueChange={(value) => setView(value as "list" | "map")}>
         <TabsList>
           <TabsTrigger value="list">List</TabsTrigger>
@@ -43,7 +43,15 @@ export function PlacesView({ items, mapPlaces, emptyMessage }: PlacesViewProps) 
       {view === "list" ? (
         <IndexScrollGrid items={items} emptyMessage={emptyMessage} />
       ) : (
-        <PlacesMap places={mapPlaces} />
+        // data-gallery-view drops .portfolio-content's reserved left rail
+        // (see globals.css) — a map wants full width, unlike the List
+        // view's indented reading column. min-h-0/flex-1 lets the map
+        // stretch down to fill the viewport in portrait mobile instead of
+        // stopping at a fixed height with dead space below it (see
+        // page.tsx's matching flex/min-h-dvh on <main>).
+        <div data-gallery-view className="min-h-0 flex-1">
+          <PlacesMap places={mapPlaces} />
+        </div>
       )}
     </div>
   );

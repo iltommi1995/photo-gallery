@@ -26,7 +26,7 @@ export default async function PlacesPage() {
     }));
 
   return (
-    <main className="p-portfolio-gutter pt-24 sm:pt-28 gallery-short:flex gallery-short:h-dvh gallery-short:flex-col gallery-short:pt-16">
+    <main className="p-portfolio-gutter pt-24 sm:pt-28 flex min-h-dvh flex-col gallery-wide:block gallery-wide:min-h-0 gallery-short:flex gallery-short:h-dvh gallery-short:flex-col gallery-short:pt-16">
       <h1 className="sr-only">Places</h1>
       <PlacesView
         items={items}

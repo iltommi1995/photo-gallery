@@ -46,6 +46,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `/places`'s Map view had two mobile-portrait issues: Leaflet's own
+  panes/controls use `z-index` up to 1000 (`leaflet.css`), high enough
+  to render above the site nav's fullscreen menu instead of beneath it
+  (fixed with `isolate`, containing those values to the map itself);
+  and it sat squeezed into the same reserved left rail as the
+  text-heavy List view while stopping at a fixed `70vh` regardless of
+  how much vertical space was actually available, leaving mismatched
+  padding and dead space below it (fixed by dropping the reserved rail
+  — `data-gallery-view`, the same mechanism the album viewer uses — and
+  stretching to fill the viewport; landscape/desktop sizing is
+  unchanged).
 - Deleting or editing an album never actually refreshed the public
   `/albums` (or `/places`) page — `revalidatePublicGalleries()` called
   `revalidatePath("/places", "layout")` / `revalidatePath("/albums",
